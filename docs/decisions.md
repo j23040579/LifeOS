@@ -30,15 +30,22 @@
 
 ## Validation and next gate
 
-- The repository has no pubspec or Flutter app. Flutter and Dart are not installed
-  in the current environment. The theme and test files cannot yet be compiled or
-  executed here; the design gate is not a runnable application.
+- A minimal Flutter package manifest was added to resolve SDK imports and enable
+  the design tests after the user reported the missing-pubspec error. It declares
+  only Flutter and its bundled flutter_test SDK dependency, without app or
+  platform scaffolding. Minimum tooling is Flutter 3.24.0 / Dart 3.5.0, which
+  supports the WidgetState APIs used by the approved theme. A specific stable
+  toolchain release remains to be pinned during platform setup.
+- Flutter and Dart are not installed in the current cloud environment. Flutter
+  compilation and tests have not been executed here. The design package is not
+  a runnable application.
 - Inter assets, their license, and font registration remain pending approved setup.
 - Full component-state contrast, focus-ring placement, reduced motion, platform
   configuration, and manual accessibility checks remain future approved work.
-- After project setup, run from the repository root:
+- With Flutter installed, run from the repository root:
 
   ```powershell
+  flutter pub get
   dart format lib/core/design test/core/design
   flutter analyze
   flutter test test/core/design

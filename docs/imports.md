@@ -23,6 +23,10 @@ does not silently overwrite prior imports. Identity uses provider session/set ke
 for Hevy, date/meal/food occurrence for nutrition, and normalized row/occurrence for
 transactions. Similar text alone does not prove two foods/transactions are the same.
 
+The weekly budget is an allocation, not a cash-account balance. Negative transaction
+amounts reduce spending (for example, refunds). Exclude allowance/income rows already
+represented by your weekly budget so that they do not increase available money twice.
+
 A rejected row is never converted into zeros. Valid new rows can be approved with
 diagnostics visible. Undo reverts a retained import transaction. Audit retention is
 50 revisions; JSON backups cover current records rather than historical snapshots.

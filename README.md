@@ -1,35 +1,54 @@
 # LifeOS
 
-Android-first, local-first personal planning. Windows desktop and Chrome support
-local testing; Web production release is later scope.
+Android-first, local-first planning, learning, and personal progress in one Flutter
+codebase. Windows desktop and Chrome support laptop development. No account,
+deployed backend, real credentials, or paid service is required for basic use.
 
-## Current phase: Home / Today sample
+## What you can test
 
-One responsive screen uses the approved light/dark themes and bundled Inter font.
-It shows three fictional priorities and their daily schedule. Mark a priority
-complete, undo it, reset the sample, change appearance, or preview loading, empty,
-and error states. Fixed commitments are labelled separately from flexible blocks.
+- **Today / Plan:** goals, projects, nested tasks, effort-weighted progress,
+  deadlines, prerequisites, fixed/pinned blocks, habits and explicit availability.
+  A deterministic scheduler preserves commitments, reserves free time, reports
+  overload, and shows a proposal before saving. Undo and revision checks protect
+  local changes. Delaying work never changes a deadline automatically.
+- **Learn:** courses, local notes, PDF/EPUB text extraction with page/section
+  provenance, prerequisite concept links, self-assessed recall and review dates,
+  source-to-task approval, local search, and focus sessions. Optional Gemini tutor
+  modes use only the question and context you select. Self-assessment is distinct
+  from verified correctness; code is never described as tested by the tutor.
+- **Progress:** Hevy CSV, MyFitnessPal TXT, manual food and body/activity/sleep
+  records, macro summaries, measurement charts with accessible values, recorded
+  exercise progression, integer-sen budgets, transactions, and outing estimates.
+  Missing nutrients/RPE stay missing; partial nutrition days stay labelled.
+- **Coach:** offline commands and scheduling, an explicitly labelled offline chat
+  demo, and optional online Gemini through a personal gateway. AI can propose a
+  task change; only a separate user approval saves it. No external write tools.
+- **Settings:** local file import with preview/deduplication, JSON backup/restore,
+  audit/undo, explicit data erasure, timezone/budget, appearance, and a separate
+  fictional demo database. Calendar ICS imports preserve external ownership.
 
-**This is an offline UI prototype.** Completion changes exist only in memory and
-reset on restart. The date is a labelled fictional sample day, not today's date.
-There is no real calendar, persistence, scheduling engine, AI, backend, or import
-implementation yet. No personal exports are bundled. No credentials, paid APIs,
-or billing accounts are required.
+This is an expanded development build, not a claim that every master-spec gate
+is production complete. See [scope and remaining work](docs/status.md) and
+[validation](docs/validation.md). External account integrations are unavailable
+until separately configured and verified; they are never simulated as connected.
 
-## Windows laptop setup
+## Windows setup
 
-1. Install a stable Flutter SDK (minimum Flutter 3.24.0 / Dart 3.5.0) and add its
-   `bin` directory to PATH. Use the Flutter-bundled Dart, not a separate Dart SDK.
-2. For Windows desktop, install **Visual Studio** with **Desktop development with
-   C++** and a compatible Windows SDK. Visual Studio Code alone is insufficient.
-3. For browser testing, install Chrome.
-4. For Android, install Android Studio, the Android SDK, and an emulator, or enable
-   USB debugging on an Android phone. Run `flutter doctor --android-licenses` if
-   required and review the licenses. Android minimum API is 26 for this prototype.
-5. Open a terminal in the LifeOS repository root containing `pubspec.yaml`:
+1. Install **Flutter stable 3.47 or newer with Dart 3.13 or newer**. Cloud checks
+   use Flutter **3.47.8 / Dart 3.13.7**. Add Flutter `bin` to PATH; use its bundled
+   Dart. PDF support now needs this newer SDK. Check `flutter --version`.
+2. Install **Visual Studio** with **Desktop development with C++** and a Windows
+   SDK. Visual Studio Code alone is insufficient. Enable Windows Developer Mode
+   if Flutter requests symlink support for plugins.
+3. Install Chrome for browser testing. Install Android Studio, an Android SDK
+   and emulator (or use USB debugging on your phone) for Android testing.
+   Review Android licences using `flutter doctor --android-licenses`.
+4. Open PowerShell in the checkout root that contains `pubspec.yaml`:
 
 ```powershell
 git pull --ff-only
+flutter channel stable
+flutter upgrade
 flutter --version
 flutter doctor -v
 flutter pub get
@@ -37,22 +56,34 @@ dart run tool/bootstrap.dart
 flutter devices
 ```
 
-The bootstrap command generates **only missing** `windows`, `web`, and `android`
-runner directories using your installed Flutter SDK in a temporary project. It
-copies those directories, sets the Android minimum SDK to at least 26, and leaves
-source, tests, dependencies, and existing runners untouched. Running it again
-preserves existing runners. Development application ID: `com.example.lifeos`;
-production identity and signing remain future decisions. Do not run
-`flutter create .` over this checkout.
+Bootstrap generates only missing Android, Windows and Web runners in a temporary
+project; it preserves app source and existing runner settings. It adds bundled
+SQLite browser assets, Android INTERNET permission for optional HTTPS AI, and
+`android:allowBackup="false"` to keep app records/tokens out of Android automatic
+cloud backups. Use explicit JSON backups for records. Minimum Android API is 26;
+existing customized runners should also use API 26 or newer. Review these additive
+manifest changes if you manage custom backup policies. Re-running bootstrap is safe.
 
-Cloud validation uses Flutter 3.47.8 / Dart 3.13.7. The bootstrap uses your
-installed compatible stable SDK. Generated runners remain local setup outputs;
-existing laptop runners are preserved, so pulling source fixes will not replace
-them. Production platform configuration/signing remains later scope.
+Generated runners and `pubspec.lock` are local in this development checkout, so
+pulling these source changes does not overwrite runners already on your laptop.
+Direct dependency versions are pinned. Preserve your resolved lock for your local
+build; release work must establish a tracked lock and production identity/signing.
+Do not run `flutter create .` over the app. The generated ID is `com.example.lifeos`.
+If your Android runner came from an older SDK, run `flutter analyze --suggestions`
+and review Flutter's Gradle/Java migration advice. The cloud-generated runner uses
+Gradle 9.3.1, Android Gradle Plugin 9.1.0, Kotlin 2.4.0 and JDK 21. Bootstrap preserves
+an existing runner's versions; upgrading Flutter does not rewrite custom Gradle files.
 
-## Run locally
+If Flutter reports no pubspec, check:
 
-After bootstrap:
+```powershell
+Get-Location
+Test-Path .\pubspec.yaml
+```
+
+Change to the actual project root before running Flutter commands.
+
+## Run and interact
 
 ```powershell
 flutter run -d windows
@@ -60,76 +91,94 @@ flutter run -d chrome
 flutter run -d <device_id>
 ```
 
-Use an actual ID from `flutter devices` for Android. The Android experience must
-be checked on an emulator or physical device; Windows and Chrome are not substitutes
-for Android-specific testing.
+Replace `<device_id>` with an Android ID from `flutter devices`. Android-specific
+behaviour still needs an emulator or device; desktop tests cannot replace it.
 
-An optional non-secret example configuration selects the initial sample state:
+The default workspace starts empty and saves locally. For fictional sample data:
 
 ```powershell
 flutter run -d windows --dart-define-from-file=config/example.json
+flutter run -d chrome --dart-define-from-file=config/example.json
 ```
 
-`DAY_PREVIEW` accepts `ready`, `loading`, `empty`, or `error`. Unknown values fall
-back to `ready`. These are UI state previews, not real network failures. The same
-states are available through **Preview states**. No API keys are read.
+The example contains only `DEMO_WORKSPACE: true`, no credentials. It uses a
+separate persistent `lifeos_demo` database. You can also open it from Settings.
+`--dart-define=DEMO_ONLY=true` opens the earlier resettable design sample; its
+`DAY_PREVIEW` accepts `ready`, `loading`, `empty`, or `error`.
 
-## Automated checks
+## Local files and data
+
+Use Settings → Import a local file or the import buttons in Learn / Progress.
+Preview new rows, duplicates, changed rows and diagnostics before saving. Repeated
+checksums do not reimport; changed existing rows are skipped, never overwritten.
+Set the source timezone before importing Hevy timestamps. Files stay local.
+
+Supported formats are documented in [imports](docs/imports.md). Synthetic examples
+are under `test/fixtures`; private uploaded exports are not committed. PDFs need
+extractable text; scanned pages require OCR or a text alternative. EPUB support
+is text extraction, not a DRM bypass or a full ebook reader.
+
+SQLite stores records on native platforms and in current Chrome browser storage.
+Browser data belongs to the exact origin, so use a fixed local web port if you
+want it to persist between development runs:
 
 ```powershell
-dart format lib test integration_test tool
+flutter run -d chrome --web-port=7357
+```
+
+Private browsing, clearing browser data, or changing origins can remove/hide that
+workspace. Reliable browser storage failure is shown explicitly. Export backups.
+The workspace database and exported JSON are **not app-encrypted**. The audit
+retains at most 50 snapshots; ordinary clear/delete remains undoable while retained.
+Settings → Erase records and history removes the current workspace and its audit;
+it does not remove exports, the separate demo, or gateway credentials. Use Coach →
+Disconnect & forget token to remove saved AI access. Exported backups omit tokens,
+API keys, audit history and session-only chat. This is not a forensic erase guarantee.
+
+## Optional Gemini online
+
+See [gateway setup](server/README.md). The app never bundles a Gemini API key.
+Windows/Android can optionally remember a gateway access token using OS-backed
+secure storage. Chrome uses session-only tokens. Storage failures preserve offline
+access; disconnect removes the saved token. No conversation generates on startup.
+
+The free-only rule means: no mandatory billing, paid fallback, automatic model
+switch or retries. You must verify that your chosen Gemini model/project is
+currently eligible for free use **without billing** and review its data-use terms.
+Quotas/model availability change. A configuration flag cannot verify your Google
+billing settings; the gateway refuses generation until you explicitly attest to
+free/no-billing configuration. No live Gemini request has been verified yet.
+An exact model called “Gemini Flash 3.8” has not been verified; do not use invented
+IDs. Model discovery instructions are in the gateway guide.
+
+For interface testing with zero credentials, use **Coach → Try chat demo (offline)**.
+Every result says it is a demo and not live AI. The optional loopback mock server
+also supports local Windows/Chrome testing; Android release networking uses HTTPS.
+
+## Checks
+
+```powershell
+dart format --output=none --set-exit-if-changed lib test integration_test tool
 flutter analyze
 flutter test
+node --test server/gemini-worker.test.mjs
+flutter test integration_test/workspace_test.dart -d windows
+flutter test integration_test/workspace_test.dart -d <device_id>
 flutter test integration_test/today_test.dart -d windows
-flutter test integration_test/today_test.dart -d <device_id>
 flutter build windows
-flutter build web
+flutter build web --no-web-resources-cdn
 flutter build apk --debug
 ```
 
-Unit/theme tests cover design contrast and mappings. Widget tests cover completion,
-undo/reset, alternate states, theme switching, and narrow layouts at 200% text.
-The integration test covers the offline completion/reset journey on a supported
-device. Browser integration tests need a separate WebDriver setup; the Chrome
-manual checks below do not imply automated browser integration coverage.
+Node tests are optional gateway protocol checks; Node is not required to run the
+Flutter app. Native PDF tests use the package's documented PDFium module override
+because Flutter's test runner is not an installed desktop app. The real parser and
+synthetic PDF are exercised. Native build hooks need the platform C/C++ compiler
+(Visual Studio on Windows; Clang for cloud Linux tests) and may download verified
+PDFium/SQLite artifacts on the first build. Browser PDF assets ship in the app.
 
-## Manual acceptance checks
-
-- In Windows and Chrome, resize from a narrow window to a wide window. Priority
-  and schedule columns should stack when narrow or when text is enlarged.
-- Switch between light, dark, and system appearance. Restarting resets the choice.
-- Mark the assignment priority complete: the summary and matching schedule block
-  should update. Undo and Reset sample should restore the sample state.
-- Use Preview states to inspect loading, empty, and error feedback. Retry/load
-  should restore the sample; these previews do not call any services.
-- Navigate by keyboard, inspect visible focus, and check 200% text/zoom for clipping.
-- Verify the same screen on Android when tooling is available.
-
-This phase does not implement file import, forms for real records, AI chat,
-notifications, Health Connect, persistence, or scheduling changes. Those require
-separately approved phases and platform-specific acceptance checks.
-
-## Validation status
-
-Validated in the Linux cloud environment with Flutter 3.47.8 / Dart 3.13.7:
-
-- `flutter analyze`: no issues.
-- `flutter test --concurrency=2`: all 19 tests passed, including narrow layouts
-  at 200% text and verified light/dark appearance changes.
-- `dart run tool/bootstrap.dart`: generated Android, Windows, and Web runners;
-  repeating the command preserved every existing runner file.
-- `flutter build web --no-web-resources-cdn`: release Web build passed.
-- Chromium smoke check: sample content, completion/reset, dark-theme pixels, and
-  narrow viewport rendering passed with no JavaScript page errors.
-
-Windows desktop compilation/execution and the device integration test remain
-unrun here because this is a Linux host. Android compilation/device tests also
-remain unrun because Android tooling is unavailable. These checks still need to
-pass on the relevant platforms before full platform readiness can be claimed.
-
-If `pubspec.yaml` cannot be found, run `Get-Location` and
-`Test-Path .\pubspec.yaml`, then change to the actual checkout root. Run
-`flutter pub get` before analysis/tests to resolve SDK imports.
-
-See [approved decisions](docs/decisions.md). Only Flutter's SDK dependencies are
-used; hosted AI remains optional and paid fallbacks are prohibited.
+For laptop acceptance: create and reload a task; pin a block; propose and cancel,
+then approve a schedule; import a fixture twice; practise recall; add an expense;
+export/restore a backup; test the offline chat demo; resize and enable 200% text.
+Review [validation evidence and platform limits](docs/validation.md) before treating
+any feature as production complete.

@@ -1,0 +1,10 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//LifeOS//Synthetic fixture//EN
+BEGIN:VEVENT
+UID:synthetic-dinner-20261026@lifeos.local
+DTSTART;TZID=Asia/Kuala_Lumpur:20261026T190000
+DTEND;TZID=Asia/Kuala_Lumpur:20261026T200000
+SUMMARY:Synthetic dinner commitment
+END:VEVENT
+END:VCALENDAR

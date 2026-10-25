@@ -9,5 +9,11 @@ void main() {
     (value) => value.name == name,
     orElse: () => DayPreview.ready,
   );
-  runApp(LifeApp(initialPreview: preview));
+  runApp(
+    LifeApp(
+      initialPreview: preview,
+      workspaceMode: !const bool.fromEnvironment('DEMO_ONLY'),
+      demoWorkspace: const bool.fromEnvironment('DEMO_WORKSPACE'),
+    ),
+  );
 }

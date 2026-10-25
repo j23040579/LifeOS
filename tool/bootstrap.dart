@@ -14,9 +14,11 @@ Future<void> main() async {
     'windows',
     'web',
   ].where((name) => !Directory(name).existsSync()).toList();
+  if (Directory('web').existsSync()) await _databaseAssets();
+  await _androidNetworking();
   if (missing.isEmpty) {
     stdout.writeln(
-      'All platform directories already exist; nothing overwritten.',
+      'All platform directories already exist; no runners regenerated.',
     );
     return;
   }
@@ -77,6 +79,8 @@ Future<void> main() async {
       );
       stdout.writeln('Created $platform runner.');
     }
+    await _androidNetworking();
+    await _databaseAssets();
     stdout.writeln(
       'Source, tests, pubspec, and existing runners were preserved.',
     );
@@ -97,5 +101,64 @@ Future<void> _copy(Directory source, Directory destination) async {
     } else {
       throw StateError('Unexpected link in generated platform: ${entry.path}');
     }
+  }
+}
+
+Future<void> _databaseAssets() async {
+  for (final name in ['sqlite3.wasm', 'drift_worker.js']) {
+    final source = File('third_party/sqlite/$name');
+    final destination = File('web/$name');
+    if (!source.existsSync())
+      throw StateError('Missing bundled database asset: $name');
+    if (destination.existsSync()) {
+      final a = await source.readAsBytes(), b = await destination.readAsBytes();
+      if (a.length != b.length ||
+          List.generate(a.length, (i) => a[i] == b[i]).contains(false)) {
+        throw StateError(
+          'Existing web/$name differs. Preserve it before updating the SQLite runtime.',
+        );
+      }
+    } else {
+      await source.copy(destination.path);
+    }
+  }
+}
+
+// Add the permission required by optional HTTPS AI in release builds. Existing
+// manifest attributes and runner files are preserved; cleartext stays disabled.
+Future<void> _androidNetworking() async {
+  final file = File('android/app/src/main/AndroidManifest.xml');
+  if (!file.existsSync()) return;
+  final original = await file.readAsString();
+  var text = original;
+  if (!text.contains('android.permission.INTERNET')) {
+    final at = text.indexOf('>');
+    if (at < 0 || !text.startsWith('<manifest'))
+      throw StateError(
+        'Unrecognized Android manifest; add INTERNET permission manually.',
+      );
+    text = text.replaceRange(
+      at + 1,
+      at + 1,
+      '\n    <uses-permission android:name="android.permission.INTERNET"/>',
+    );
+  }
+  final application = RegExp(r'<application\b[^>]*>').firstMatch(text);
+  if (application == null)
+    throw StateError('No Android application manifest element.');
+  var tag = application.group(0)!;
+  final backup = RegExp(r'android:allowBackup="[^"]*"');
+  tag = backup.hasMatch(tag)
+      ? tag.replaceFirst(backup, 'android:allowBackup="false"')
+      : tag.replaceFirst(
+          '<application',
+          '<application android:allowBackup="false"',
+        );
+  text = text.replaceRange(application.start, application.end, tag);
+  if (text != original) {
+    await file.writeAsString(text);
+    stdout.writeln(
+      'Configured Android HTTPS access and disabled automatic backup; use explicit local JSON backups.',
+    );
   }
 }

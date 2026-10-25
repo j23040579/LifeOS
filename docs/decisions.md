@@ -115,3 +115,28 @@
 - Work proceeds through local data and deterministic scheduling, imports/progress,
   learning/coaching, and optional integration boundaries. Live external API access
   must never be claimed without credentials and actual verification.
+
+## Current offline workspace and Gemini boundary
+
+- The user additionally approved PDF/EPUB parser libraries (`pdfrx`, `archive`,
+  `xml`) and `flutter_secure_storage` for optionally remembering gateway access.
+  Direct versions are pinned. `http` is now an explicit dependency for the gateway
+  client/server, rather than an incidental transitive dependency.
+- Gemini online is the selected live AI direction; Ollama was dropped at the user's
+  request. No exact “Flash 3.8” model ID has been verified. Model selection is explicit
+  and requires a confirmed currently free/no-billing project. No paid fallback.
+- The Gemini key stays server-side. Native access tokens use optional OS secure
+  storage; browser tokens and chat remain session-only. Tokens are absent from
+  SQLite records/audit/JSON backups. Android automatic backup is disabled by bootstrap.
+- Runtime requirement increased to Flutter >=3.47 / Dart >=3.13 for current PDF
+  engine support. Tested cloud SDK remains 3.47.8 / 3.13.7.
+- Implemented a separate persistent workspace and fictional demo database, pure
+  deterministic planning/import/analytics services, Drift storage, reviewed actions,
+  local PDF/EPUB sources, progress and budget tools. See status.md for actual scope;
+  earlier sample-only statements above record historical gates, not current limits.
+- Calendar access currently uses conservative local ICS, not a claimed live Google
+  connection. External credentials and sync remain unavailable; offline alternatives
+  stay useful. Paid provider APIs are not prerequisites.
+- Native Windows/device validation and live Gemini activation remain explicit
+  acceptance work. Cloud Linux tests, web builds and mocked gateway checks do not
+  establish those capabilities. See validation.md for commands actually executed.

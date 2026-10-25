@@ -117,15 +117,14 @@ class LifeFeedback extends ThemeExtension<LifeFeedback> {
     Color? successSurface,
     Color? info,
     Color? infoSurface,
-  }) =>
-      LifeFeedback(
-        warning: warning ?? this.warning,
-        warningSurface: warningSurface ?? this.warningSurface,
-        success: success ?? this.success,
-        successSurface: successSurface ?? this.successSurface,
-        info: info ?? this.info,
-        infoSurface: infoSurface ?? this.infoSurface,
-      );
+  }) => LifeFeedback(
+    warning: warning ?? this.warning,
+    warningSurface: warningSurface ?? this.warningSurface,
+    success: success ?? this.success,
+    successSurface: successSurface ?? this.successSurface,
+    info: info ?? this.info,
+    infoSurface: infoSurface ?? this.infoSurface,
+  );
 
   @override
   LifeFeedback lerp(covariant LifeFeedback? other, double t) {
@@ -145,12 +144,24 @@ class LifeFeedback extends ThemeExtension<LifeFeedback> {
 @immutable
 class EditorialPalette {
   const EditorialPalette(
-      this.featureSurface, this.featureText, this.brandSurface, this.brandText);
+    this.featureSurface,
+    this.featureText,
+    this.brandSurface,
+    this.brandText,
+  );
   final Color featureSurface, featureText, brandSurface, brandText;
-  static const dark = EditorialPalette(Color(0xFF2B2220), Color(0xFFF0D7C1),
-      Color(0xFF342027), Color(0xFFF0A6B5));
-  static const light = EditorialPalette(Color(0xFFEEE3D7), Color(0xFF493B30),
-      Color(0xFFF6E1E6), Color(0xFF951735));
+  static const dark = EditorialPalette(
+    Color(0xFF2B2220),
+    Color(0xFFF0D7C1),
+    Color(0xFF342027),
+    Color(0xFFF0A6B5),
+  );
+  static const light = EditorialPalette(
+    Color(0xFFEEE3D7),
+    Color(0xFF493B30),
+    Color(0xFFF6E1E6),
+    Color(0xFF951735),
+  );
   static EditorialPalette of(BuildContext context) =>
       Theme.of(context).brightness == Brightness.dark ? dark : light;
 }

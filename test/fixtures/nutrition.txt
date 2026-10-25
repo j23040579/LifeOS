@@ -1,0 +1,5 @@
+Oct 26, 2026
+FOODS	Calories	Carbs	Fat	Protein	Cholest	Sodium	Sugar	Fiber
+Breakfast
+Synthetic oats	200	30g	5g	8g	--	100mg	3g	4g
+TOTALS	200	30g	5g	8g	--	100mg	3g	4g

@@ -88,7 +88,7 @@ abstract final class AppTheme {
       textTheme: text,
       disabledColor: p.disabled,
       dividerColor: p.divider,
-      focusColor: p.text,
+      focusColor: p.text.withValues(alpha: 0.12),
       visualDensity: VisualDensity.standard,
       materialTapTargetSize: MaterialTapTargetSize.padded,
       extensions: [feedback],
@@ -125,27 +125,61 @@ abstract final class AppTheme {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: p.text,
-          disabledForegroundColor: p.disabled,
-          minimumSize: const Size(48, 48),
-          textStyle: text.labelLarge,
-        ),
+        style:
+            TextButton.styleFrom(
+              foregroundColor: p.text,
+              disabledForegroundColor: p.disabled,
+              minimumSize: const Size(48, 48),
+              textStyle: text.labelLarge,
+            ).copyWith(
+              side: WidgetStateProperty.resolveWith(
+                (states) => BorderSide(
+                  color: states.contains(WidgetState.focused)
+                      ? p.text
+                      : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+            ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: OutlinedButton.styleFrom(
-          foregroundColor: p.text,
-          disabledForegroundColor: p.disabled,
-          side: BorderSide(color: p.outline),
-          minimumSize: const Size(48, 48),
-          shape: shape,
-          textStyle: text.labelLarge,
+        style:
+            OutlinedButton.styleFrom(
+              foregroundColor: p.text,
+              disabledForegroundColor: p.disabled,
+              side: BorderSide(color: p.outline),
+              minimumSize: const Size(48, 48),
+              shape: shape,
+              textStyle: text.labelLarge,
+            ).copyWith(
+              side: WidgetStateProperty.resolveWith(
+                (states) => BorderSide(
+                  color: states.contains(WidgetState.focused)
+                      ? p.text
+                      : p.outline,
+                  width: states.contains(WidgetState.focused) ? 2 : 1,
+                ),
+              ),
+            ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
+          side: WidgetStateProperty.resolveWith(
+            (states) => BorderSide(
+              color: states.contains(WidgetState.focused)
+                  ? p.text
+                  : Colors.transparent,
+              width: 2,
+            ),
+          ),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: p.surface,
         labelStyle: TextStyle(color: p.secondary),
+        floatingLabelStyle: TextStyle(color: p.text),
         hintStyle: TextStyle(color: p.secondary),
         errorStyle: TextStyle(color: p.error),
         contentPadding: const EdgeInsets.all(16),

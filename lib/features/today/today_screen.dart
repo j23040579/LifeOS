@@ -30,9 +30,9 @@ class _TodayScreenState extends State<TodayScreen> {
   }
 
   void _reset() => setState(() {
-        _completed.clear();
-        _preview = DayPreview.ready;
-      });
+    _completed.clear();
+    _preview = DayPreview.ready;
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,7 +68,9 @@ class _TodayScreenState extends State<TodayScreen> {
                         ),
                         Text('LifeOS', style: theme.textTheme.titleLarge),
                         _CategoryBadge(
-                            label: 'YOUR DAILY EDIT', category: 'Study'),
+                          label: 'YOUR DAILY EDIT',
+                          category: 'Study',
+                        ),
                         PopupMenuButton<ThemeMode>(
                           tooltip: 'Choose appearance',
                           initialValue: widget.themeMode,
@@ -94,15 +96,20 @@ class _TodayScreenState extends State<TodayScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('DEMO WORKSPACE',
-                              style: theme.textTheme.labelLarge?.copyWith(
-                                  letterSpacing: 1.5,
-                                  color: colors.onSurfaceVariant)),
+                          Text(
+                            'DEMO WORKSPACE',
+                            style: theme.textTheme.labelLarge?.copyWith(
+                              letterSpacing: 1.5,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
                           const SizedBox(height: 8),
                           Text(
-                              'Fictional data · Changes reset when you restart. No services connected.',
-                              style: theme.textTheme.bodySmall
-                                  ?.copyWith(color: colors.onSurfaceVariant)),
+                            'Fictional data · Changes reset when you restart. No services connected.',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
                           Wrap(
                             spacing: 8,
                             crossAxisAlignment: WrapCrossAlignment.center,
@@ -187,19 +194,27 @@ class _TodayScreenState extends State<TodayScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _CategoryBadge(
-                      label: priority.category, category: priority.category),
+                    label: priority.category,
+                    category: priority.category,
+                  ),
                   const SizedBox(height: 8),
-                  Text(priority.title,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                          fontSize: priority.id == 'assignment' ? 26 : 22,
-                          height: 1.3,
-                          color: priority.id == 'assignment'
-                              ? EditorialPalette.of(context).featureText
-                              : null)),
+                  Text(
+                    priority.title,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontSize: priority.id == 'assignment' ? 26 : 22,
+                      height: 1.3,
+                      color: priority.id == 'assignment'
+                          ? EditorialPalette.of(context).featureText
+                          : null,
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text(priority.detail,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant)),
+                  Text(
+                    priority.detail,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     key: Key('complete-${priority.id}'),
@@ -230,9 +245,12 @@ class _TodayScreenState extends State<TodayScreen> {
       children: [
         Text('The shape of your day', style: theme.textTheme.headlineMedium),
         const SizedBox(height: 8),
-        Text('A rhythm, not a rigid routine.',
-            style: theme.textTheme.bodyMedium
-                ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+        Text(
+          'A rhythm, not a rigid routine.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
         const SizedBox(height: 16),
         _Panel(
           child: Column(
@@ -337,16 +355,15 @@ class _Panel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: color ?? Theme.of(context).colorScheme.surface,
-          border:
-              Border.all(color: Theme.of(context).colorScheme.outlineVariant),
-          borderRadius: BorderRadius.circular(DesignTokens.radiusPanel),
-        ),
-        child: child,
-      );
+    width: double.infinity,
+    padding: const EdgeInsets.all(24),
+    decoration: BoxDecoration(
+      color: color ?? Theme.of(context).colorScheme.surface,
+      border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+      borderRadius: BorderRadius.circular(DesignTokens.radiusPanel),
+    ),
+    child: child,
+  );
 }
 
 class _ScheduleBlock extends StatelessWidget {
@@ -361,10 +378,13 @@ class _ScheduleBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(block.time,
-            style: theme.textTheme.labelLarge?.copyWith(
-                color: EditorialPalette.of(context).brandText,
-                letterSpacing: 0.5)),
+        Text(
+          block.time,
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: EditorialPalette.of(context).brandText,
+            letterSpacing: 0.5,
+          ),
+        ),
         const SizedBox(height: 8),
         Text(block.title, style: theme.textTheme.titleLarge),
         const SizedBox(height: 8),
@@ -376,9 +396,12 @@ class _ScheduleBlock extends StatelessWidget {
               block.isFixed ? Icons.lock_outline : Icons.swap_vert,
               size: 20,
             ),
-            Text(block.detail,
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+            Text(
+              block.detail,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
             if (complete) const Text('✓ Complete'),
           ],
         ),
@@ -398,20 +421,27 @@ class _CategoryBadge extends StatelessWidget {
     final color = category == 'Learn'
         ? feedback.info
         : category == 'Wellbeing'
-            ? feedback.success
-            : editorial.brandText;
+        ? feedback.success
+        : editorial.brandText;
     final surface = category == 'Learn'
         ? feedback.infoSurface
         : category == 'Wellbeing'
-            ? feedback.successSurface
-            : editorial.brandSurface;
+        ? feedback.successSurface
+        : editorial.brandSurface;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration:
-          BoxDecoration(color: surface, borderRadius: BorderRadius.circular(8)),
-      child: Text(label.toUpperCase(),
-          style: theme.textTheme.labelLarge
-              ?.copyWith(color: color, fontSize: 12, letterSpacing: 1.2)),
+      decoration: BoxDecoration(
+        color: surface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label.toUpperCase(),
+        style: theme.textTheme.labelLarge?.copyWith(
+          color: color,
+          fontSize: 12,
+          letterSpacing: 1.2,
+        ),
+      ),
     );
   }
 }
@@ -424,32 +454,55 @@ class _DayHeading extends StatelessWidget {
     final theme = Theme.of(context);
     final editorial = EditorialPalette.of(context);
     final compact = MediaQuery.sizeOf(context).width < 600;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(SampleDay.date.toUpperCase(),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          SampleDay.date.toUpperCase(),
           style: theme.textTheme.labelLarge?.copyWith(
-              letterSpacing: 1.6, color: theme.colorScheme.onSurfaceVariant)),
-      const SizedBox(height: 16),
-      Text.rich(
-          TextSpan(children: [
-            const TextSpan(text: 'Make room for\n'),
-            TextSpan(
+            letterSpacing: 1.6,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text.rich(
+          TextSpan(
+            children: [
+              const TextSpan(text: 'Make room for\n'),
+              TextSpan(
                 text: 'what matters.',
                 style: TextStyle(
-                    color: editorial.brandText, fontWeight: FontWeight.w600)),
-          ]),
+                  color: editorial.brandText,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
           style: theme.textTheme.displaySmall?.copyWith(
-              fontSize: compact ? 44 : 64, height: 1.08, letterSpacing: -1.8)),
-      const SizedBox(height: 16),
-      Text('Less noise. More intention. A day that feels like yours.',
-          style: theme.textTheme.bodyLarge
-              ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
-      const SizedBox(height: 24),
-      Wrap(spacing: 24, runSpacing: 16, children: [
-        _Metric(value: '03', label: 'priorities'),
-        _Metric(value: '05', label: 'time blocks'),
-        _Metric(value: '$completed/3', label: 'complete'),
-      ]),
-    ]);
+            fontSize: compact ? 44 : 64,
+            height: 1.08,
+            letterSpacing: -1.8,
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          'Less noise. More intention. A day that feels like yours.',
+          style: theme.textTheme.bodyLarge?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 24),
+        Wrap(
+          spacing: 24,
+          runSpacing: 16,
+          children: [
+            _Metric(value: '03', label: 'priorities'),
+            _Metric(value: '05', label: 'time blocks'),
+            _Metric(value: '$completed/3', label: 'complete'),
+          ],
+        ),
+      ],
+    );
   }
 }
 
@@ -457,15 +510,23 @@ class _Metric extends StatelessWidget {
   const _Metric({required this.value, required this.label});
   final String value, label;
   @override
-  Widget build(BuildContext context) =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(value,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w400,
-                color: EditorialPalette.of(context).featureText)),
-        Text(label.toUpperCase(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                letterSpacing: 1,
-                color: Theme.of(context).colorScheme.onSurfaceVariant))
-      ]);
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        value,
+        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+          fontWeight: FontWeight.w400,
+          color: EditorialPalette.of(context).featureText,
+        ),
+      ),
+      Text(
+        label.toUpperCase(),
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          letterSpacing: 1,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    ],
+  );
 }

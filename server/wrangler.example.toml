@@ -1,0 +1,14 @@
+# Optional user-owned deployment template. No deployment has been performed.
+name = "lifeos-personal-gateway"
+main = "gemini-worker.mjs"
+compatibility_date = "2026-10-01"
+workers_dev = true
+
+[vars]
+# Set a verified, currently free-eligible model ID before deployment.
+LIFEOS_AI_MODEL = ""
+GEMINI_FREE_PROJECT_CONFIRMED = "false"
+# APP_ORIGIN = "https://your-future-web-app.example"
+
+# Supply GEMINI_API_KEY and LIFEOS_GATEWAY_TOKEN through Worker secrets.
+# Do not put secrets here. Confirm Workers Free plan/account limits first.

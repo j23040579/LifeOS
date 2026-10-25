@@ -10,3 +10,10 @@ coverage/
 /android/local.properties
 /android/.gradle/
 /windows/flutter/ephemeral/
+
+# Local AI gateway secrets must never enter source control.
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*

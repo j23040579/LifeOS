@@ -67,7 +67,8 @@ class _TodayScreenState extends State<TodayScreen> {
                           ),
                         ),
                         Text('LifeOS', style: theme.textTheme.titleLarge),
-                        Text('TODAY', style: theme.textTheme.labelLarge),
+                        _CategoryBadge(
+                            label: 'YOUR DAILY EDIT', category: 'Study'),
                         PopupMenuButton<ThemeMode>(
                           tooltip: 'Choose appearance',
                           initialValue: widget.themeMode,
@@ -93,12 +94,15 @@ class _TodayScreenState extends State<TodayScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('SAMPLE DAY', style: theme.textTheme.labelLarge),
+                          Text('DEMO WORKSPACE',
+                              style: theme.textTheme.labelLarge?.copyWith(
+                                  letterSpacing: 1.5,
+                                  color: colors.onSurfaceVariant)),
                           const SizedBox(height: 8),
-                          const Text(
-                            'Fictional data · Changes reset when you '
-                            'restart. No accounts or services connected.',
-                          ),
+                          Text(
+                              'Fictional data · Changes reset when you restart. No services connected.',
+                              style: theme.textTheme.bodySmall
+                                  ?.copyWith(color: colors.onSurfaceVariant)),
                           Wrap(
                             spacing: 8,
                             crossAxisAlignment: WrapCrossAlignment.center,
@@ -136,24 +140,7 @@ class _TodayScreenState extends State<TodayScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    Text(
-                      SampleDay.date,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Make room for\nwhat matters.',
-                      style: theme.textTheme.displaySmall,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'A little structure. Space for real life.',
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
+                    _DayHeading(completed: _completed.length),
                     const SizedBox(height: 32),
                     if (_preview == DayPreview.ready)
                       _ready(context)
@@ -193,19 +180,26 @@ class _TodayScreenState extends State<TodayScreen> {
           Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: _Panel(
+              color: priority.id == 'assignment'
+                  ? EditorialPalette.of(context).featureSurface
+                  : null,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    priority.category.toUpperCase(),
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
+                  _CategoryBadge(
+                      label: priority.category, category: priority.category),
                   const SizedBox(height: 8),
-                  Text(priority.title, style: theme.textTheme.titleLarge),
+                  Text(priority.title,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                          fontSize: priority.id == 'assignment' ? 26 : 22,
+                          height: 1.3,
+                          color: priority.id == 'assignment'
+                              ? EditorialPalette.of(context).featureText
+                              : null)),
                   const SizedBox(height: 8),
-                  Text(priority.detail),
+                  Text(priority.detail,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant)),
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     key: Key('complete-${priority.id}'),
@@ -236,14 +230,16 @@ class _TodayScreenState extends State<TodayScreen> {
       children: [
         Text('The shape of your day', style: theme.textTheme.headlineMedium),
         const SizedBox(height: 8),
-        const Text('Your sample plan, with breathing room between blocks.'),
+        Text('A rhythm, not a rigid routine.',
+            style: theme.textTheme.bodyMedium
+                ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
         const SizedBox(height: 16),
         _Panel(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               for (var index = 0; index < SampleDay.blocks.length; index++) ...[
-                if (index > 0) const Divider(height: 32),
+                if (index > 0) const SizedBox(height: 24),
                 _ScheduleBlock(
                   block: SampleDay.blocks[index],
                   complete: _completed.contains(
@@ -333,7 +329,9 @@ class _TodayScreenState extends State<TodayScreen> {
 }
 
 class _Panel extends StatelessWidget {
-  const _Panel({required this.child});
+  const _Panel({required this.child, this.color});
+
+  final Color? color;
 
   final Widget child;
 
@@ -342,7 +340,9 @@ class _Panel extends StatelessWidget {
         width: double.infinity,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: color ?? Theme.of(context).colorScheme.surface,
+          border:
+              Border.all(color: Theme.of(context).colorScheme.outlineVariant),
           borderRadius: BorderRadius.circular(DesignTokens.radiusPanel),
         ),
         child: child,
@@ -361,7 +361,10 @@ class _ScheduleBlock extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(block.time, style: theme.textTheme.labelLarge),
+        Text(block.time,
+            style: theme.textTheme.labelLarge?.copyWith(
+                color: EditorialPalette.of(context).brandText,
+                letterSpacing: 0.5)),
         const SizedBox(height: 8),
         Text(block.title, style: theme.textTheme.titleLarge),
         const SizedBox(height: 8),
@@ -373,11 +376,96 @@ class _ScheduleBlock extends StatelessWidget {
               block.isFixed ? Icons.lock_outline : Icons.swap_vert,
               size: 20,
             ),
-            Text(block.detail),
+            Text(block.detail,
+                style: theme.textTheme.bodyMedium
+                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
             if (complete) const Text('✓ Complete'),
           ],
         ),
       ],
     );
   }
+}
+
+class _CategoryBadge extends StatelessWidget {
+  const _CategoryBadge({required this.label, required this.category});
+  final String label, category;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final editorial = EditorialPalette.of(context);
+    final feedback = theme.extension<LifeFeedback>()!;
+    final color = category == 'Learn'
+        ? feedback.info
+        : category == 'Wellbeing'
+            ? feedback.success
+            : editorial.brandText;
+    final surface = category == 'Learn'
+        ? feedback.infoSurface
+        : category == 'Wellbeing'
+            ? feedback.successSurface
+            : editorial.brandSurface;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration:
+          BoxDecoration(color: surface, borderRadius: BorderRadius.circular(8)),
+      child: Text(label.toUpperCase(),
+          style: theme.textTheme.labelLarge
+              ?.copyWith(color: color, fontSize: 12, letterSpacing: 1.2)),
+    );
+  }
+}
+
+class _DayHeading extends StatelessWidget {
+  const _DayHeading({required this.completed});
+  final int completed;
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final editorial = EditorialPalette.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(SampleDay.date.toUpperCase(),
+          style: theme.textTheme.labelLarge?.copyWith(
+              letterSpacing: 1.6, color: theme.colorScheme.onSurfaceVariant)),
+      const SizedBox(height: 16),
+      Text.rich(
+          TextSpan(children: [
+            const TextSpan(text: 'Make room for\n'),
+            TextSpan(
+                text: 'what matters.',
+                style: TextStyle(
+                    color: editorial.brandText, fontWeight: FontWeight.w600)),
+          ]),
+          style: theme.textTheme.displaySmall?.copyWith(
+              fontSize: compact ? 44 : 64, height: 1.08, letterSpacing: -1.8)),
+      const SizedBox(height: 16),
+      Text('Less noise. More intention. A day that feels like yours.',
+          style: theme.textTheme.bodyLarge
+              ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+      const SizedBox(height: 24),
+      Wrap(spacing: 24, runSpacing: 16, children: [
+        _Metric(value: '03', label: 'priorities'),
+        _Metric(value: '05', label: 'time blocks'),
+        _Metric(value: '$completed/3', label: 'complete'),
+      ]),
+    ]);
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({required this.value, required this.label});
+  final String value, label;
+  @override
+  Widget build(BuildContext context) =>
+      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(value,
+            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w400,
+                color: EditorialPalette.of(context).featureText)),
+        Text(label.toUpperCase(),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                letterSpacing: 1,
+                color: Theme.of(context).colorScheme.onSurfaceVariant))
+      ]);
 }

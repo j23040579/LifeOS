@@ -52,8 +52,8 @@ class Palette {
     canvas: Color(0xFF0E0E10),
     surface: Color(0xFF19191C),
     raised: Color(0xFF242428),
-    text: Color(0xFFF5F2EE),
-    secondary: Color(0xFFB9B6B2),
+    text: Color(0xFFF0E4D5),
+    secondary: Color(0xFFBBAEA3),
     disabled: Color(0xFF85817D),
     divider: Color(0xFF38383D),
     outline: Color(0xFF85817D),
@@ -65,8 +65,8 @@ class Palette {
     canvas: Color(0xFFF5F2EE),
     surface: Color(0xFFFFFFFF),
     raised: Color(0xFFEAE6E0),
-    text: Color(0xFF19191C),
-    secondary: Color(0xFF615D59),
+    text: Color(0xFF29231F),
+    secondary: Color(0xFF6A5F56),
     disabled: Color(0xFF85817D),
     divider: Color(0xFFD8D2CB),
     outline: Color(0xFF77716B),
@@ -139,4 +139,18 @@ class LifeFeedback extends ThemeExtension<LifeFeedback> {
       infoSurface: Color.lerp(infoSurface, other.infoSurface, t)!,
     );
   }
+}
+
+/// Warm editorial surfaces and accessible brand-derived foregrounds.
+@immutable
+class EditorialPalette {
+  const EditorialPalette(
+      this.featureSurface, this.featureText, this.brandSurface, this.brandText);
+  final Color featureSurface, featureText, brandSurface, brandText;
+  static const dark = EditorialPalette(Color(0xFF2B2220), Color(0xFFF0D7C1),
+      Color(0xFF342027), Color(0xFFF0A6B5));
+  static const light = EditorialPalette(Color(0xFFEEE3D7), Color(0xFF493B30),
+      Color(0xFFF6E1E6), Color(0xFF951735));
+  static EditorialPalette of(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark ? dark : light;
 }

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'design_tokens.dart';
 
 /// Approved theme foundation. Component states still need rendered validation.
-/// Inter assets and registration belong to the separately approved setup phase.
+/// Inter is bundled locally, without runtime font downloads.
 abstract final class AppTheme {
   static ThemeData get light => build(Brightness.light);
   static ThemeData get dark => build(Brightness.dark);
@@ -59,7 +59,7 @@ abstract final class AppTheme {
     );
 
     final text = TextTheme(
-      displaySmall: _type(36, 44, FontWeight.w600),
+      displaySmall: _type(52, 58, FontWeight.w500),
       headlineMedium: _type(28, 36, FontWeight.w600),
       titleLarge: _type(20, 28, FontWeight.w600),
       bodyLarge: _type(16, 24, FontWeight.w400),

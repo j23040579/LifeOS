@@ -12,6 +12,23 @@ double contrast(Color a, Color b) {
 }
 
 void main() {
+  for (final pair in [
+    (EditorialPalette.dark, Palette.dark),
+    (EditorialPalette.light, Palette.light),
+  ]) {
+    test('editorial surfaces retain readable text in ${pair.$2.canvas}', () {
+      final editorial = pair.$1;
+      final palette = pair.$2;
+      expect(contrast(editorial.featureText, editorial.featureSurface),
+          greaterThanOrEqualTo(4.5));
+      expect(contrast(palette.secondary, editorial.featureSurface),
+          greaterThanOrEqualTo(4.5));
+      expect(contrast(editorial.brandText, editorial.brandSurface),
+          greaterThanOrEqualTo(4.5));
+      expect(contrast(editorial.brandText, palette.canvas),
+          greaterThanOrEqualTo(4.5));
+    });
+  }
   for (final brightness in Brightness.values) {
     final p = brightness == Brightness.dark ? Palette.dark : Palette.light;
     final feedback =

@@ -99,3 +99,19 @@
   environment configuration draft. Saving is distinct from user publication.
 - Stop at this phase pending the user's laptop validation and feedback; do not
   start another feature phase automatically.
+
+## Broader continuation and visual revision
+
+- The user requested more visual character and explicitly authorized continuing
+  through all remaining feature phases. Earlier per-phase stop instructions are
+  superseded by that authorization; implementation must still be validated and
+  remaining limitations reported accurately.
+- The visual revision uses warmer neutral text, a larger editorial headline,
+  accessible rose foregrounds derived from the crimson brand, category badges,
+  and a warm featured card. Crimson remains restrained; error feedback stays amber.
+- The user approved Drift/SQLite, file_selector, and csv for local persistence and
+  imports, then timezone and crypto for IANA zones and SHA-256 import checksums.
+  These libraries require no paid service or billing account.
+- Work proceeds through local data and deterministic scheduling, imports/progress,
+  learning/coaching, and optional integration boundaries. Live external API access
+  must never be claimed without credentials and actual verification.

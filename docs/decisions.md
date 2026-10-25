@@ -61,3 +61,28 @@
 
 - Stop after this gate. Project scaffolding/platform setup and the first screen
   each require an agreed scope; selecting a screen does not authorize building it.
+
+## Home / Today phase (authorized, runtime validation pending)
+
+- The user reported all design tests passing and authorized continuation, then
+  explicitly selected Home / Today. Scope: one screen with synthetic fixtures,
+  responsive layout, local reversible completion, theme selection, alternate
+  states, and focused widget/integration tests. No other screens or domain phases.
+- Sample completion and appearance are session-only. This phase does not claim
+  persistence, scheduling optimization, import functionality, or live AI.
+- Only the bundled integration_test SDK dependency was added, to exercise the
+  offline completion/reset journey. No third-party Dart package was added.
+- Inter is now bundled with its OFL license and pinned source/hash information.
+- Platform setup is provided through tool/bootstrap.dart, which generates only
+  missing Android, Windows, and Web runners in a temporary Flutter project,
+  preserving source and existing runners. The provisional Android minimum is 26.
+- No Flutter SDK is executable in this cloud instance. The official download
+  host storage.googleapis.com returned a policy denial. Its domain addition was
+  saved in the environment configuration draft; publication and runtime access
+  are not established by that save.
+- Manifest/config parsing, font file signature/license checks, and whitespace
+  checks passed. These do not establish Dart syntax, compilation, UI behavior,
+  platform generation, screenshot fidelity, or test success. Those checks remain
+  pending until Flutter access is available. Do not mark this phase complete yet.
+- Next action: enable the saved download-host requirement in environment settings
+  and validate this phase; do not start another feature phase.

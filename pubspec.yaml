@@ -1,5 +1,5 @@
 name: lifeos
-description: Approved LifeOS design tokens and Flutter theme foundations.
+description: Android-first LifeOS with an offline sample Today experience.
 publish_to: 'none'
 version: 0.1.0
 
@@ -14,6 +14,12 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/inter/InterVariable.ttf

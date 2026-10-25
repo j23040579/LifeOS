@@ -5,3 +5,8 @@
 .flutter-plugins-dependencies
 build/
 coverage/
+.idea/
+*.iml
+/android/local.properties
+/android/.gradle/
+/windows/flutter/ephemeral/

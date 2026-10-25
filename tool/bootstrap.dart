@@ -3,16 +3,21 @@
 import 'dart:io';
 
 Future<void> main() async {
-  if (!File('pubspec.yaml').existsSync() || !File('lib/main.dart').existsSync()) {
+  if (!File('pubspec.yaml').existsSync() ||
+      !File('lib/main.dart').existsSync()) {
     stderr.writeln('Run from the LifeOS repository root.');
     exitCode = 1;
     return;
   }
-  final missing = ['android', 'windows', 'web']
-      .where((name) => !Directory(name).existsSync())
-      .toList();
+  final missing = [
+    'android',
+    'windows',
+    'web',
+  ].where((name) => !Directory(name).existsSync()).toList();
   if (missing.isEmpty) {
-    stdout.writeln('All platform directories already exist; nothing overwritten.');
+    stdout.writeln(
+      'All platform directories already exist; nothing overwritten.',
+    );
     return;
   }
   final temp = await Directory.systemTemp.createTemp('lifeos-platforms-');
@@ -51,20 +56,30 @@ Future<void> main() async {
       if (!matcher.hasMatch(contents) && !legacyMatcher.hasMatch(contents)) {
         throw StateError('Unrecognized Android minimum SDK template.');
       }
-      await file.writeAsString(contents
-          .replaceAll(
+      await file.writeAsString(
+        contents
+            .replaceAll(
               matcher,
               gradle.existsSync()
                   ? 'minSdk = maxOf(26, flutter.minSdkVersion)'
-                  : 'minSdk = Math.max(26, flutter.minSdkVersion)')
-          .replaceAll(legacyMatcher,
-              'minSdkVersion Math.max(26, flutter.minSdkVersion)'));
+                  : 'minSdk = Math.max(26, flutter.minSdkVersion)',
+            )
+            .replaceAll(
+              legacyMatcher,
+              'minSdkVersion Math.max(26, flutter.minSdkVersion)',
+            ),
+      );
     }
     for (final platform in missing) {
-      await _copy(Directory('${generated.path}/$platform'), Directory(platform));
+      await _copy(
+        Directory('${generated.path}/$platform'),
+        Directory(platform),
+      );
       stdout.writeln('Created $platform runner.');
     }
-    stdout.writeln('Source, tests, pubspec, and existing runners were preserved.');
+    stdout.writeln(
+      'Source, tests, pubspec, and existing runners were preserved.',
+    );
   } finally {
     await temp.delete(recursive: true);
   }

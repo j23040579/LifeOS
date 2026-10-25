@@ -6,7 +6,9 @@ import 'package:lifeos/app.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('offline sample priority can be completed and reset', (tester) async {
+  testWidgets('offline sample priority can be completed and reset', (
+    tester,
+  ) async {
     await tester.pumpWidget(const LifeApp());
     await tester.pumpAndSettle();
     final complete = find.byKey(const Key('complete-assignment'));

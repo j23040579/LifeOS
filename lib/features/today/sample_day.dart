@@ -23,22 +23,46 @@ class SampleBlock {
 abstract final class SampleDay {
   static const date = 'Monday, 26 October 2026';
   static const priorities = [
-    SamplePriority('assignment', 'Finish the assignment outline',
-        '90 min · Due Tue, 27 Oct', 'Study'),
-    SamplePriority('revision', 'Practise linked lists',
-        '60 min · Recall, trace, then code', 'Learn'),
-    SamplePriority('training', 'Make time for strength',
-        '60 min · Flexible training block', 'Wellbeing'),
+    SamplePriority(
+      'assignment',
+      'Finish the assignment outline',
+      '90 min · Due Tue, 27 Oct',
+      'Study',
+    ),
+    SamplePriority(
+      'revision',
+      'Practise linked lists',
+      '60 min · Recall, trace, then code',
+      'Learn',
+    ),
+    SamplePriority(
+      'training',
+      'Make time for strength',
+      '60 min · Flexible training block',
+      'Wellbeing',
+    ),
   ];
 
   static const blocks = [
-    SampleBlock('08:30–10:00', 'Assignment outline', 'Study · Flexible',
-        priorityId: 'assignment'),
+    SampleBlock(
+      '08:30–10:00',
+      'Assignment outline',
+      'Study · Flexible',
+      priorityId: 'assignment',
+    ),
     SampleBlock('10:30–11:30', 'Data structures lecture', 'University · Fixed'),
     SampleBlock('12:00–13:00', 'Lunch with a friend', 'Personal · Fixed'),
-    SampleBlock('14:00–15:00', 'Linked-list practice', 'Learn · Flexible',
-        priorityId: 'revision'),
-    SampleBlock('17:00–18:00', 'Strength session', 'Wellbeing · Flexible',
-        priorityId: 'training'),
+    SampleBlock(
+      '14:00–15:00',
+      'Linked-list practice',
+      'Learn · Flexible',
+      priorityId: 'revision',
+    ),
+    SampleBlock(
+      '17:00–18:00',
+      'Strength session',
+      'Wellbeing · Flexible',
+      priorityId: 'training',
+    ),
   ];
 }

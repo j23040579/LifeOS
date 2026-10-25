@@ -36,10 +36,10 @@
   platform scaffolding. Minimum tooling is Flutter 3.24.0 / Dart 3.5.0, which
   supports the WidgetState APIs used by the approved theme. A specific stable
   toolchain release remains to be pinned during platform setup.
-- Flutter and Dart are not installed in the current cloud environment. Flutter
-  compilation and tests have not been executed here. The design package is not
-  a runnable application.
-- Inter assets, their license, and font registration remain pending approved setup.
+- At the design-only gate, Flutter/Dart were unavailable and the source was not
+  compiled. Later cloud validation is recorded below.
+- Inter assets, license, and font registration were subsequently added in the
+  approved Home / Today phase.
 - Full component-state contrast, focus-ring placement, reduced motion, platform
   configuration, and manual accessibility checks remain future approved work.
 - With Flutter installed, run from the repository root:
@@ -59,10 +59,10 @@
   flutter run -d <device_id>
   ```
 
-- Stop after this gate. Project scaffolding/platform setup and the first screen
-  each require an agreed scope; selecting a screen does not authorize building it.
+- The design-only gate concluded before the user authorized continuation and
+  selected Home / Today. Do not treat that approval as approval for further phases.
 
-## Home / Today phase (authorized, runtime validation pending)
+## Home / Today phase
 
 - The user reported all design tests passing and authorized continuation, then
   explicitly selected Home / Today. Scope: one screen with synthetic fixtures,
@@ -76,13 +76,26 @@
 - Platform setup is provided through tool/bootstrap.dart, which generates only
   missing Android, Windows, and Web runners in a temporary Flutter project,
   preserving source and existing runners. The provisional Android minimum is 26.
-- No Flutter SDK is executable in this cloud instance. The official download
-  host storage.googleapis.com returned a policy denial. Its domain addition was
-  saved in the environment configuration draft; publication and runtime access
-  are not established by that save.
-- Manifest/config parsing, font file signature/license checks, and whitespace
-  checks passed. These do not establish Dart syntax, compilation, UI behavior,
-  platform generation, screenshot fidelity, or test success. Those checks remain
-  pending until Flutter access is available. Do not mark this phase complete yet.
-- Next action: enable the saved download-host requirement in environment settings
-  and validate this phase; do not start another feature phase.
+- Initial cloud validation was blocked by the SDK download-host policy. After
+  storage.googleapis.com became allowed, Flutter 3.47.8 / Dart 3.13.7 was installed
+  from the official Flutter repository/artifacts with TLS verification retained.
+- Fixed the missing closing list bracket in the sample-state menu that caused
+  the user's analyzer, test compilation, and Windows build failures. Dart
+  formatting now succeeds across the source and tests.
+- `flutter analyze`: no issues. `flutter test --concurrency=2`: all 19 tests passed.
+  Appearance tests now tap the menu item and verify actual theme brightness.
+- Bootstrap generated all three platform runners successfully; rerunning it
+  preserved hashes of every existing runner file. Generated runners and package
+  cache/lock outputs stay local in this cloud instance, avoiding collisions with
+  the user's existing generated laptop files when they pull the source fix.
+- `flutter build web --no-web-resources-cdn`: passed. Chromium smoke checks
+  verified initial content, completion, reset, dark-theme canvas pixels, and
+  narrow viewport rendering with no JavaScript page errors. Screenshots were
+  captured for visual inspection. These are not full screen-reader checks.
+- Windows native execution remains unrun on this Linux host. Android build/device
+  checks and device integration tests remain unrun without their tooling. The
+  browser smoke check does not replace these platform checks.
+- Reusable cloud installation/startup instructions were tested and saved in an
+  environment configuration draft. Saving is distinct from user publication.
+- Stop at this phase pending the user's laptop validation and feedback; do not
+  start another feature phase automatically.

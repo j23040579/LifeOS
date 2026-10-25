@@ -14,9 +14,8 @@ double contrast(Color a, Color b) {
 void main() {
   for (final brightness in Brightness.values) {
     final p = brightness == Brightness.dark ? Palette.dark : Palette.light;
-    final feedback = brightness == Brightness.dark
-        ? LifeFeedback.dark
-        : LifeFeedback.light;
+    final feedback =
+        brightness == Brightness.dark ? LifeFeedback.dark : LifeFeedback.light;
 
     group(brightness.name, () {
       for (final background in [p.canvas, p.surface, p.raised]) {

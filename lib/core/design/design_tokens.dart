@@ -117,14 +117,15 @@ class LifeFeedback extends ThemeExtension<LifeFeedback> {
     Color? successSurface,
     Color? info,
     Color? infoSurface,
-  }) => LifeFeedback(
-    warning: warning ?? this.warning,
-    warningSurface: warningSurface ?? this.warningSurface,
-    success: success ?? this.success,
-    successSurface: successSurface ?? this.successSurface,
-    info: info ?? this.info,
-    infoSurface: infoSurface ?? this.infoSurface,
-  );
+  }) =>
+      LifeFeedback(
+        warning: warning ?? this.warning,
+        warningSurface: warningSurface ?? this.warningSurface,
+        success: success ?? this.success,
+        successSurface: successSurface ?? this.successSurface,
+        info: info ?? this.info,
+        infoSurface: infoSurface ?? this.infoSurface,
+      );
 
   @override
   LifeFeedback lerp(covariant LifeFeedback? other, double t) {

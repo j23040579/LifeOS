@@ -46,7 +46,8 @@ class _TodayScreenState extends State<TodayScreen> {
               constraints: const BoxConstraints(maxWidth: 1280),
               child: Padding(
                 padding: EdgeInsets.all(
-                    MediaQuery.sizeOf(context).width < 600 ? 16 : 32),
+                  MediaQuery.sizeOf(context).width < 600 ? 16 : 32,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -94,8 +95,10 @@ class _TodayScreenState extends State<TodayScreen> {
                         children: [
                           Text('SAMPLE DAY', style: theme.textTheme.labelLarge),
                           const SizedBox(height: 8),
-                          const Text('Fictional data · Changes reset when you '
-                              'restart. No accounts or services connected.'),
+                          const Text(
+                            'Fictional data · Changes reset when you '
+                            'restart. No accounts or services connected.',
+                          ),
                           Wrap(
                             spacing: 8,
                             crossAxisAlignment: WrapCrossAlignment.center,
@@ -121,6 +124,7 @@ class _TodayScreenState extends State<TodayScreen> {
                                         DayPreview.error => 'Error state',
                                       }),
                                     ),
+                                ],
                                 child: const Padding(
                                   padding: EdgeInsets.all(16),
                                   child: Text('Preview states'),
@@ -132,26 +136,37 @@ class _TodayScreenState extends State<TodayScreen> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                    Text(SampleDay.date,
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(color: colors.onSurfaceVariant)),
+                    Text(
+                      SampleDay.date,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    Text('Make room for\nwhat matters.',
-                        style: theme.textTheme.displaySmall),
+                    Text(
+                      'Make room for\nwhat matters.',
+                      style: theme.textTheme.displaySmall,
+                    ),
                     const SizedBox(height: 12),
-                    Text('A little structure. Space for real life.',
-                        style: theme.textTheme.bodyLarge
-                            ?.copyWith(color: colors.onSurfaceVariant)),
+                    Text(
+                      'A little structure. Space for real life.',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
                     const SizedBox(height: 32),
                     if (_preview == DayPreview.ready)
                       _ready(context)
                     else
                       _alternative(context),
                     const SizedBox(height: 32),
-                    Text('Sample times shown in Asia/Kuala_Lumpur. '
-                        'No calendar changes have been made.',
-                        style: theme.textTheme.bodySmall
-                            ?.copyWith(color: colors.onSurfaceVariant)),
+                    Text(
+                      'Sample times shown in Asia/Kuala_Lumpur. '
+                      'No calendar changes have been made.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -181,9 +196,12 @@ class _TodayScreenState extends State<TodayScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(priority.category.toUpperCase(),
-                      style: theme.textTheme.labelLarge
-                          ?.copyWith(color: theme.colorScheme.onSurfaceVariant)),
+                  Text(
+                    priority.category.toUpperCase(),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Text(priority.title, style: theme.textTheme.titleLarge),
                   const SizedBox(height: 8),
@@ -196,12 +214,16 @@ class _TodayScreenState extends State<TodayScreen> {
                         _completed.remove(priority.id);
                       }
                     }),
-                    icon: Icon(_completed.contains(priority.id)
-                        ? Icons.check_circle_outline
-                        : Icons.circle_outlined),
-                    label: Text(_completed.contains(priority.id)
-                        ? 'Completed · Undo'
-                        : 'Mark complete'),
+                    icon: Icon(
+                      _completed.contains(priority.id)
+                          ? Icons.check_circle_outline
+                          : Icons.circle_outlined,
+                    ),
+                    label: Text(
+                      _completed.contains(priority.id)
+                          ? 'Completed · Undo'
+                          : 'Mark complete',
+                    ),
                   ),
                 ],
               ),
@@ -225,7 +247,8 @@ class _TodayScreenState extends State<TodayScreen> {
                 _ScheduleBlock(
                   block: SampleDay.blocks[index],
                   complete: _completed.contains(
-                      SampleDay.blocks[index].priorityId),
+                    SampleDay.blocks[index].priorityId,
+                  ),
                 ),
               ],
             ],
@@ -233,24 +256,24 @@ class _TodayScreenState extends State<TodayScreen> {
         ),
       ],
     );
-    return LayoutBuilder(builder: (context, constraints) {
-      final largeText = MediaQuery.textScalerOf(context).scale(16) > 24;
-      if (constraints.maxWidth < 900 || largeText) {
-        return Column(children: [
-          priorities,
-          const SizedBox(height: 24),
-          schedule,
-        ]);
-      }
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: priorities),
-          const SizedBox(width: 32),
-          Expanded(child: schedule),
-        ],
-      );
-    });
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final largeText = MediaQuery.textScalerOf(context).scale(16) > 24;
+        if (constraints.maxWidth < 900 || largeText) {
+          return Column(
+            children: [priorities, const SizedBox(height: 24), schedule],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: priorities),
+            const SizedBox(width: 32),
+            Expanded(child: schedule),
+          ],
+        );
+      },
+    );
   }
 
   Widget _alternative(BuildContext context) {
@@ -283,15 +306,21 @@ class _TodayScreenState extends State<TodayScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(error ? Icons.error_outline : Icons.event_available_outlined,
-              color: error ? theme.colorScheme.error : null),
+          Icon(
+            error ? Icons.error_outline : Icons.event_available_outlined,
+            color: error ? theme.colorScheme.error : null,
+          ),
           const SizedBox(height: 16),
-          Text(error ? 'The sample day could not load' : 'A little open space',
-              style: theme.textTheme.titleLarge),
+          Text(
+            error ? 'The sample day could not load' : 'A little open space',
+            style: theme.textTheme.titleLarge,
+          ),
           const SizedBox(height: 8),
-          Text(error
-              ? 'This is a preview of an error. No data has been lost.'
-              : 'No priorities or time blocks in this sample state.'),
+          Text(
+            error
+                ? 'This is a preview of an error. No data has been lost.'
+                : 'No priorities or time blocks in this sample state.',
+          ),
           const SizedBox(height: 16),
           FilledButton(
             onPressed: () => setState(() => _preview = DayPreview.ready),
@@ -340,7 +369,10 @@ class _ScheduleBlock extends StatelessWidget {
           spacing: 8,
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Icon(block.isFixed ? Icons.lock_outline : Icons.swap_vert, size: 20),
+            Icon(
+              block.isFixed ? Icons.lock_outline : Icons.swap_vert,
+              size: 20,
+            ),
             Text(block.detail),
             if (complete) const Text('✓ Complete'),
           ],

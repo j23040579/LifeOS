@@ -45,9 +45,10 @@ preserves existing runners. Development application ID: `com.example.lifeos`;
 production identity and signing remain future decisions. Do not run
 `flutter create .` over this checkout.
 
-A specific stable toolchain and generated runners will be pinned/checked in after
-cloud SDK access permits validated generation. Until then, the bootstrap uses
-your installed compatible stable version; this is not a reproducible SDK pin.
+Cloud validation uses Flutter 3.47.8 / Dart 3.13.7. The bootstrap uses your
+installed compatible stable SDK. Generated runners remain local setup outputs;
+existing laptop runners are preserved, so pulling source fixes will not replace
+them. Production platform configuration/signing remains later scope.
 
 ## Run locally
 
@@ -110,13 +111,21 @@ separately approved phases and platform-specific acceptance checks.
 
 ## Validation status
 
-The user reported the original design tests passing on their laptop. The new
-screen, integration tests, and bootstrap have **not yet been executed in this
-cloud environment**: Flutter/Dart are unavailable and the policy blocks Flutter's
-official `storage.googleapis.com` download host. Windows execution also requires a
-Windows host, and Android builds require Android SDK tooling. No screenshots or
-build success are claimed before those checks run. This phase remains pending
-runtime validation.
+Validated in the Linux cloud environment with Flutter 3.47.8 / Dart 3.13.7:
+
+- `flutter analyze`: no issues.
+- `flutter test --concurrency=2`: all 19 tests passed, including narrow layouts
+  at 200% text and verified light/dark appearance changes.
+- `dart run tool/bootstrap.dart`: generated Android, Windows, and Web runners;
+  repeating the command preserved every existing runner file.
+- `flutter build web --no-web-resources-cdn`: release Web build passed.
+- Chromium smoke check: sample content, completion/reset, dark-theme pixels, and
+  narrow viewport rendering passed with no JavaScript page errors.
+
+Windows desktop compilation/execution and the device integration test remain
+unrun here because this is a Linux host. Android compilation/device tests also
+remain unrun because Android tooling is unavailable. These checks still need to
+pass on the relevant platforms before full platform readiness can be claimed.
 
 If `pubspec.yaml` cannot be found, run `Get-Location` and
 `Test-Path .\pubspec.yaml`, then change to the actual checkout root. Run

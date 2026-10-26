@@ -15,6 +15,10 @@ import '../../domain/ai_context.dart';
 import '../../domain/analytics.dart';
 import '../../domain/calendar_file.dart';
 import '../../domain/availability.dart';
+import '../../domain/day_assessment.dart';
+import '../../core/design/motion.dart';
+import 'home_overview.dart';
+import 'calendar_timeline.dart';
 import '../../domain/sample_workspace.dart';
 import '../../domain/imports.dart';
 import '../../domain/planning.dart';
@@ -24,6 +28,8 @@ import 'entry_form.dart';
 import 'trend_chart.dart';
 
 part 'planning_view.dart';
+part 'calendar_actions.dart';
+part 'home_actions.dart';
 
 part 'learning_view.dart';
 
@@ -111,6 +117,7 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
 
   void refresh(VoidCallback change) => setState(change);
   int page = 0;
+  DateTime? _calendarDate;
   int _notePage = 0;
   String _sourceCourse = '';
   late AiGateway? _gateway = widget.initialGateway;
@@ -118,17 +125,27 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
       ? null
       : 'Development/test gateway';
   bool _aiBusy = false;
+  bool _checkInBusy = false;
+  DayAssessment? _dayAssessment;
+  int? _assessmentRevision;
+  String? _assessmentNotice;
   final List<({String question, AiAnswer answer, int revision})> _answers = [];
   final Set<AiAnswer> _acceptedAiActions = {};
   final Stopwatch _focusWatch = Stopwatch();
   final ValueNotifier<int> _focusSeconds = ValueNotifier(0);
   Timer? _focusTick;
   String? _focusId;
+  int? _lastSnapshotMinute;
   @override
   void initState() {
     super.initState();
     _focusTick = Timer.periodic(const Duration(seconds: 1), (_) {
       _focusSeconds.value = _focusWatch.elapsed.inSeconds;
+      final minute = DateTime.now().millisecondsSinceEpoch ~/ 60000;
+      if (_lastSnapshotMinute != minute) {
+        _lastSnapshotMinute = minute;
+        if (mounted && page == 0) refresh(() {});
+      }
     });
   }
 
@@ -218,6 +235,7 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
           ),
           body: SafeArea(
             child: SingleChildScrollView(
+              key: PageStorageKey('workspace-$page'),
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 1200),
@@ -253,13 +271,16 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
                               ],
                             ),
                           ),
-                        switch (page) {
-                          0 => _today(),
-                          1 => _plan(),
-                          2 => _learn(),
-                          3 => _progress(),
-                          _ => _coach(),
-                        },
+                        DestinationMotion(
+                          destination: page,
+                          child: switch (page) {
+                            0 => _today(),
+                            1 => _plan(),
+                            2 => _learn(),
+                            3 => _progress(),
+                            _ => _coach(),
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -268,6 +289,7 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
             ),
           ),
           bottomNavigationBar: NavigationBar(
+            animationDuration: motionDuration(context),
             selectedIndex: page,
             onDestinationSelected: (value) => refresh(() => page = value),
             destinations: const [
@@ -376,259 +398,95 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
     ),
   );
   Widget _today() {
-    final pending =
-        resolveHierarchy(store.tasks).leaves
-            .where(
-              (t) =>
-                  t.state == TaskState.pending || t.state == TaskState.active,
-            )
-            .toList()
-          ..sort((a, b) => a.deadline.compareTo(b.deadline));
     final today = clock.day(clock.now());
-    final blocks =
-        store.blocks
-            .where(
-              (b) =>
-                  clock.day(clock.local(b.start)).compareTo(today) <= 0 &&
-                  clock
-                          .day(
-                            clock.local(
-                              b.end.subtract(const Duration(milliseconds: 1)),
-                            ),
-                          )
-                          .compareTo(today) >=
-                      0,
-            )
-            .toList()
-          ..sort((a, b) => a.start.compareTo(b.start));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        heading(
-          'Make room for\nwhat matters.',
-          '$today · ${clock.name} · Your private, local workspace',
-        ),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            FilledButton.icon(
-              onPressed: store.busy ? null : () => _task(),
-              icon: const Icon(Icons.add),
-              label: const Text('New task'),
-            ),
-            OutlinedButton(
-              onPressed: () => refresh(() => page = 1),
-              child: const Text('Review your plan'),
-            ),
-          ],
-        ),
+        _homeOverview(),
         const SizedBox(height: 24),
-        if (planningWarnings(store.tasks, store.blocks, clock.now()).isNotEmpty)
-          panel(
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'A little attention needed',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Theme.of(context).extension<LifeFeedback>()!.warning,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                for (final warning in planningWarnings(
-                  store.tasks,
-                  store.blocks,
-                  clock.now(),
-                ).take(5))
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(warning),
-                  ),
-                TextButton(
-                  onPressed: () => refresh(() => page = 1),
-                  child: const Text('Review the plan'),
-                ),
-              ],
-            ),
+        ExpansionTile(
+          expansionAnimationStyle: AnimationStyle(
+            duration: motionDuration(context),
           ),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          title: const Text('Goals & daily anchors'),
           children: [
-            _summaryPill('${pending.length}', 'active priorities'),
-            _summaryPill(
-              '${(pending.fold<int>(0, (n, t) => n + t.minutes) / 60).toStringAsFixed(1)}h',
-              'remaining effort',
+            Text(
+              'The longer view',
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
-            _summaryPill('${blocks.length}', 'blocks today'),
-          ],
-        ),
-        const SizedBox(height: 32),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final priorities = Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'NEXT UP',
-                  style: Theme.of(context).textTheme.labelLarge
-                      ?.copyWith(letterSpacing: 1.8),
+            const SizedBox(height: 16),
+            for (final goal in store.of('goal'))
+              panel(
+                line(
+                  goal['title'],
+                  '${goal['body']} · ${goal['status']}',
+                  action: TextButton(
+                    onPressed: () => _goal(goal),
+                    child: const Text('Review goal'),
+                  ),
                 ),
-                const SizedBox(height: 16),
-                if (pending.isEmpty)
-                  panel(
-                    line(
-                      'A little open space',
-                      'Add a task or import your own records. Nothing is sent to a server.',
-                      action: TextButton(
-                        onPressed: _openDemo,
-                        child: const Text('Explore a separate demo workspace'),
-                      ),
-                    ),
-                  ),
-                for (final task in pending.take(3))
-                  _taskCard(task, feature: task == pending.first),
-              ],
-            );
-            final timeline = Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'The shape of your day',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 16),
-                if (blocks.isEmpty)
-                  panel(
-                    const Text(
-                      'No time blocks today. Plan with explicit availability and review changes before applying.',
-                    ),
-                  ),
-                for (final block in blocks)
-                  panel(
-                    line(
-                      block.title,
-                      '${clock.stamp(block.start)} → ${clock.stamp(block.end)} · ${block.fixed
-                          ? 'Fixed'
-                          : block.pinned
-                          ? 'Pinned'
-                          : 'Flexible'} · ${block.source}',
-                    ),
-                  ),
-              ],
-            );
-            if (constraints.maxWidth < 900 ||
-                MediaQuery.textScalerOf(context).scale(16) > 24) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [priorities, const SizedBox(height: 16), timeline],
-              );
-            }
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(flex: 6, child: priorities),
-                const SizedBox(width: 32),
-                Expanded(flex: 5, child: timeline),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'The longer view',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: 16),
-        for (final goal in store.of('goal'))
-          panel(
-            line(
-              goal['title'],
-              '${goal['body']} · ${goal['status']}',
-              action: TextButton(
-                onPressed: () => _goal(goal),
-                child: const Text('Review goal'),
               ),
+            OutlinedButton(onPressed: _goal, child: const Text('Add a goal')),
+            const SizedBox(height: 24),
+            Text(
+              'Small anchors',
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
-          ),
-        OutlinedButton(onPressed: _goal, child: const Text('Add a goal')),
-        const SizedBox(height: 24),
-        Text(
-          'Small anchors',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: 16),
-        for (final habit in store.of('habit'))
-          panel(
-            line(
-              habit['title'],
-              (List.from(habit['days'] ?? []).contains(today))
-                  ? 'Done today'
-                  : 'Not recorded today',
-              action: TextButton(
+            const SizedBox(height: 16),
+            for (final habit in store.of('habit'))
+              panel(
+                line(
+                  habit['title'],
+                  (List.from(habit['days'] ?? []).contains(today))
+                      ? 'Done today'
+                      : 'Not recorded today',
+                  action: TextButton(
+                    onPressed: () => store.put({
+                      ...habit,
+                      'days': (List<String>.from(
+                        habit['days'] ?? [],
+                      )..remove(today))..add(today),
+                    }, 'Record habit completion'),
+                    child: Text(
+                      habit['paused'] == true
+                          ? 'Record anyway'
+                          : 'Record today',
+                    ),
+                  ),
+                ),
+              ),
+            OutlinedButton(onPressed: _habit, child: const Text('Add a habit')),
+            TextButton(
+              onPressed: _planHabits,
+              child: const Text('Plan next week’s habits'),
+            ),
+            for (final habit in store.of('habit'))
+              TextButton(
                 onPressed: () => store.put({
                   ...habit,
-                  'days': (List<String>.from(
-                    habit['days'] ?? [],
-                  )..remove(today))..add(today),
-                }, 'Record habit completion'),
+                  'paused': habit['paused'] != true,
+                }, 'Change habit pause'),
                 child: Text(
-                  habit['paused'] == true ? 'Record anyway' : 'Record today',
+                  '${habit['paused'] == true ? 'Resume' : 'Pause'} ${habit['title']}',
                 ),
               ),
-            ),
-          ),
-        OutlinedButton(onPressed: _habit, child: const Text('Add a habit')),
-        TextButton(
-          onPressed: _planHabits,
-          child: const Text('Plan next week’s habits'),
-        ),
-        for (final habit in store.of('habit'))
-          TextButton(
-            onPressed: () => store.put({
-              ...habit,
-              'paused': habit['paused'] != true,
-            }, 'Change habit pause'),
-            child: Text(
-              '${habit['paused'] == true ? 'Resume' : 'Pause'} ${habit['title']}',
-            ),
-          ),
-        TextButton(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => TodayScreen(
-                themeMode: widget.themeMode,
-                onThemeChanged: widget.onThemeChanged,
+            TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => TodayScreen(
+                    themeMode: widget.themeMode,
+                    onThemeChanged: widget.onThemeChanged,
+                  ),
+                ),
               ),
+              child: const Text('View the fictional design sample'),
             ),
-          ),
-          child: const Text('View the fictional design sample'),
+          ],
         ),
       ],
     );
   }
-
-  Widget _summaryPill(String value, String label) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-    decoration: BoxDecoration(
-      color: EditorialPalette.of(context).brandSurface,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineMedium
-              ?.copyWith(color: EditorialPalette.of(context).brandText),
-        ),
-        const SizedBox(height: 4),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    ),
-  );
 
   Widget _taskCard(PlanTask task, {bool feature = false}) => panel(
     line(

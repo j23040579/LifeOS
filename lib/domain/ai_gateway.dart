@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import 'clock.dart';
+import 'day_assessment.dart';
 
 class AiAnswer {
   const AiAnswer(
@@ -129,6 +130,20 @@ class AiGateway {
       suggestion: suggestion,
       warning: warning,
     );
+  }
+
+  Future<DayAssessment> assessDay(DayEvidence evidence) async {
+    if (evidence.localScore == null) return DayAssessment.local(evidence);
+    final answer = await ask(
+      'Assess current planning pace only, not lifetime progress, health or personal worth. '
+      'Only use these aggregate observations; do not invent comparisons, records or diagnoses. '
+      'Tasks scheduled later today are not failures. Put a JSON object encoded as the answer string with '
+      'score (integer 0–100), feedback (short, practical, nonjudgmental), confidence (limited or moderate). '
+      'No task proposal. Explain uncertainty. Evidence: ${jsonEncode(evidence.sharedSummary)}',
+    );
+    if (!answer.live || answer.provider != 'gemini')
+      throw const FormatException('Live Gemini is unavailable');
+    return DayAssessment.gemini(answer.text, answer.model, evidence.at);
   }
 
   void close() => client.close();

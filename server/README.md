@@ -29,8 +29,9 @@ verification. The code cannot prevent charges if you supply a billed project.
 There is no automatic provider/model fallback or retry. Quota/auth/provider errors
 leave local workflows available. Stop using live generation if free access ceases.
 
-“Gemini Flash 3.8” has not been verified as an official model. Use an exact ID from
-your account's model list and then verify that ID's free eligibility separately.
+The user-supplied pricing text identifies `gemini-3.8-flash` as the intended model.
+Confirm that exact ID in your account's model list and verify its current free
+eligibility separately; no live request has independently established that here.
 With `GEMINI_API_KEY` configured securely in the server environment:
 
 ```powershell

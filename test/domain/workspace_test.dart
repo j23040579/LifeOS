@@ -152,4 +152,81 @@ void main() {
     );
     expect(store.blocks, isEmpty);
   });
+  test('focus updates actual effort atomically, is idempotent and does not claim completion', () async {
+    final task = PlanTask(
+      id: 't',
+      title: 'T',
+      minutes: 60,
+      deadline: DateTime.utc(2030),
+    );
+    await store.put({...task.toJson(), 'kind': 'task'}, 'Task');
+    final focus = {
+      'id': 'f',
+      'kind': 'focus',
+      'title': 'Study',
+      'taskId': 't',
+      'minutes': 12.5,
+    };
+    expect(await store.recordFocus(focus), true);
+    expect(store.tasks.single.actualMinutes, 12);
+    await store.recordFocus(focus);
+    expect(store.tasks.single.actualMinutes, 12);
+    expect(store.tasks.single.minutes, 60);
+    expect(store.tasks.single.state, TaskState.pending);
+    final revision = store.snapshot.revision;
+    expect(
+      await store.recordFocus({...focus, 'id': 'bad', 'taskId': 'missing'}),
+      false,
+    );
+    expect(store.snapshot.revision, revision);
+    expect(store.snapshot.records.containsKey('bad'), false);
+  });
+  test(
+    'event links survive optimizer approval and unlinking never deletes tasks',
+    () async {
+      final task = PlanTask(
+        id: 't',
+        title: 'T',
+        minutes: 60,
+        deadline: DateTime.utc(2030),
+      );
+      await store.put({...task.toJson(), 'kind': 'task'}, 'Task');
+      final event = PlanBlock(
+        id: 'e',
+        title: 'E',
+        start: DateTime.utc(2029, 1, 1, 9),
+        end: DateTime.utc(2029, 1, 1, 10),
+        fixed: true,
+        relatedTaskIds: ['t'],
+      );
+      await store.put({
+        ...event.toJson(),
+        'kind': 'block',
+        'externalId': 'source-uid',
+        'description': 'Preserve this source note',
+        'batch': 'import-checksum',
+      }, 'Event');
+      final proposal = Scheduler().propose(
+        revision: store.snapshot.revision,
+        tasks: store.tasks,
+        existing: store.blocks,
+        windows: [
+          TimeWindow(
+            DateTime.utc(2029, 1, 1, 10),
+            DateTime.utc(2029, 1, 1, 12),
+          ),
+        ],
+      );
+      expect(await store.apply(proposal), true);
+      expect(store.blocks.first.relatedTaskIds, ['t']);
+      expect(store.snapshot.records['e']!['externalId'], 'source-uid');
+      expect(
+        store.snapshot.records['e']!['description'],
+        'Preserve this source note',
+      );
+      expect(store.snapshot.records['e']!['batch'], 'import-checksum');
+      await store.remove('e');
+      expect(store.tasks.single.id, 't');
+    },
+  );
 }

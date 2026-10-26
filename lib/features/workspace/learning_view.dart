@@ -38,6 +38,21 @@ extension _LearningView on _WorkspaceShellState {
         ),
         const SizedBox(height: 24),
         _focusCard(),
+        for (final session in store.of('focus').reversed.take(5))
+          panel(
+            line(
+              session['title'] ?? 'Focus session',
+              '${(session['minutes'] as num).toStringAsFixed(1)} actual minutes · ${session['taskId'] == null ? 'Unlinked' : store.snapshot.records[session['taskId']]?['title'] ?? 'Removed task'}\n${session['reflection'] ?? ''}',
+            ),
+          ),
+        for (final reflection in store.of('reflection').reversed.take(3))
+          panel(
+            line(
+              'Reflection · ${reflection['date']}',
+              '${reflection['body']}\nEnergy ${reflection['energy']} / 5 · Self-reported',
+            ),
+          ),
+
         const SizedBox(height: 16),
         DropdownButtonFormField<String>(
           isExpanded: true,
@@ -400,21 +415,24 @@ extension _LearningView on _WorkspaceShellState {
             ),
             OutlinedButton(
               onPressed: () async {
-                _focusWatch.stop();
+                refresh(() => _focusWatch.stop());
                 final seconds = _focusWatch.elapsed.inSeconds;
                 if (seconds == 0) {
                   message('Start a focus session first.');
                   return;
                 }
-                final saved = await store.put({
+                final fields = await _focusDetails();
+                if (fields == null) return;
+                final saved = await store.recordFocus({
+                  ...fields,
                   'id': _focusId ?? store.id('focus'),
                   'kind': 'focus',
-                  'title': 'Focus session',
+                  'taskId': fields['taskId']!.isEmpty ? null : fields['taskId'],
                   'seconds': seconds,
                   'minutes': seconds / 60,
                   'at': clock.now().toUtc().toIso8601String(),
                   'source': 'Local timer',
-                }, 'Save focus session');
+                });
                 if (saved && mounted)
                   refresh(() {
                     _focusWatch.reset();
@@ -428,6 +446,10 @@ extension _LearningView on _WorkspaceShellState {
               onPressed: _recordFocus,
               child: const Text('Record manually'),
             ),
+            TextButton(
+              onPressed: _dailyReflection,
+              child: const Text('Daily reflection'),
+            ),
           ],
         ),
       ],
@@ -440,6 +462,15 @@ extension _LearningView on _WorkspaceShellState {
       [
         const EntryField('title', 'What did you work on?'),
         const EntryField('minutes', 'Actual focused minutes'),
+        EntryField(
+          'taskId',
+          'Linked task (optional)',
+          optional: true,
+          choices: {
+            '': 'No linked task',
+            for (final t in store.tasks) t.id: t.title,
+          },
+        ),
         const EntryField(
           'reflection',
           'What helped or got in the way?',
@@ -455,12 +486,74 @@ extension _LearningView on _WorkspaceShellState {
       },
     );
     if (fields != null)
-      await store.put({
+      await store.recordFocus({
         'id': store.id('focus'),
         'kind': 'focus',
         ...fields,
+        'taskId': fields['taskId']!.isEmpty ? null : fields['taskId'],
         'minutes': int.parse(fields['minutes']!),
         'at': clock.now().toUtc().toIso8601String(),
-      }, 'Record actual focus');
+      });
+  }
+
+  Future<Map<String, String>?> _focusDetails() => entryForm(
+    context,
+    'Save your focus session',
+    [
+      const EntryField(
+        'title',
+        'What did you work on?',
+        value: 'Focus session',
+      ),
+      EntryField(
+        'taskId',
+        'Linked task (optional)',
+        optional: true,
+        choices: {
+          '': 'No linked task',
+          for (final t in store.tasks) t.id: t.title,
+        },
+      ),
+      const EntryField(
+        'reflection',
+        'What helped or got in the way?',
+        optional: true,
+        lines: 3,
+      ),
+    ],
+    notice: 'Recorded time updates actual minutes only. Remaining effort and completion need your own confirmation.',
+  );
+
+  Future<void> _dailyReflection() async {
+    final date = clock.day(clock.now()),
+        id = 'reflection-${clock.day(clock.now())}';
+    final previous = store.snapshot.records[id];
+    final fields = await entryForm(
+      context,
+      'A moment to reflect',
+      [
+        EntryField(
+          'body',
+          'What did you plan, what happened, and what could help tomorrow?',
+          value: previous?['body'] ?? '',
+          lines: 4,
+        ),
+        EntryField(
+          'energy',
+          'Energy (self-reported)',
+          value: '${previous?['energy'] ?? 3}',
+          choices: {for (var i = 1; i <= 5; i++) '$i': '$i / 5'},
+        ),
+      ],
+      notice: 'Private, local self-reflection. This is not a medical assessment and is not sent in the Home score summary.',
+    );
+    if (fields == null) return;
+    await store.put({
+      'id': id,
+      'kind': 'reflection',
+      'date': date,
+      'body': fields['body'],
+      'energy': int.parse(fields['energy']!),
+    }, 'Save daily reflection');
   }
 }

@@ -65,9 +65,11 @@ class PlanBlock {
     this.fixed = false,
     this.pinned = false,
     this.source = 'LifeOS',
+    this.relatedTaskIds = const [],
   });
   final String id, title, source;
   final String? taskId;
+  final List<String> relatedTaskIds;
   final DateTime start, end;
   final bool fixed, pinned;
   bool get immovable => fixed || pinned || source != 'LifeOS';
@@ -77,6 +79,7 @@ class PlanBlock {
     'start': start.toUtc().toIso8601String(),
     'end': end.toUtc().toIso8601String(),
     'taskId': taskId,
+    'relatedTaskIds': relatedTaskIds,
     'fixed': fixed,
     'pinned': pinned,
     'source': source,
@@ -87,6 +90,7 @@ class PlanBlock {
     start: DateTime.parse(j['start']),
     end: DateTime.parse(j['end']),
     taskId: j['taskId'],
+    relatedTaskIds: List<String>.from(j['relatedTaskIds'] ?? []),
     fixed: j['fixed'] ?? false,
     pinned: j['pinned'] ?? false,
     source: j['source'] ?? 'LifeOS',

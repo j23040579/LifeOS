@@ -63,21 +63,33 @@ class Workspace extends ChangeNotifier {
     }
   }
 
-  Future<bool> put(Map<String, dynamic> record, String description) =>
-      change(description, (records) {
-        _validateRecord(record);
-        if (record['kind'] == 'note' &&
-            (records[record['id']]?['body'] != record['body'] ||
-                records[record['id']]?['source'] != record['source'] ||
-                records[record['id']]?['reference'] != record['reference'])) {
-          records.updateAll(
-            (_, value) => value['sourceNoteId'] == record['id']
-                ? {...value, 'sourceStale': true}
-                : value,
-          );
-        }
-        records[record['id']] = record;
-      });
+  Future<bool> put(Map<String, dynamic> record, String description) => change(
+    description,
+    (records) {
+      if (record['kind'] == 'task') {
+        final previous = records[record['id']];
+        if (record['state'] == 'completed' && previous?['state'] != 'completed')
+          record = {
+            ...record,
+            'completedAt': DateTime.now().toUtc().toIso8601String(),
+          };
+        if (record['state'] != 'completed')
+          record = {...record, 'completedAt': null};
+      }
+      _validateRecord(record);
+      if (record['kind'] == 'note' &&
+          (records[record['id']]?['body'] != record['body'] ||
+              records[record['id']]?['source'] != record['source'] ||
+              records[record['id']]?['reference'] != record['reference'])) {
+        records.updateAll(
+          (_, value) => value['sourceNoteId'] == record['id']
+              ? {...value, 'sourceStale': true}
+              : value,
+        );
+      }
+      records[record['id']] = record;
+    },
+  );
   Future<bool> remove(String id) => change('Delete local record', (records) {
     records.remove(id);
     records.updateAll(
@@ -91,6 +103,13 @@ class Workspace extends ChangeNotifier {
     records.updateAll((key, value) {
       if (value['kind'] == 'task' && value['parentId'] == id)
         return {...value, 'parentId': null};
+      if (value['kind'] == 'block' && value['taskId'] != id) {
+        return {
+          ...value,
+          'relatedTaskIds': List<String>.from(value['relatedTaskIds'] ?? [])
+            ..remove(id),
+        };
+      }
       if (value['kind'] == 'block' && value['taskId'] == id) {
         if (value['source'] == 'LifeOS' &&
             value['fixed'] != true &&
@@ -98,7 +117,12 @@ class Workspace extends ChangeNotifier {
           remove.add(key);
           return value;
         }
-        return {...value, 'taskId': null};
+        return {
+          ...value,
+          'taskId': null,
+          'relatedTaskIds': List<String>.from(value['relatedTaskIds'] ?? [])
+            ..remove(id),
+        };
       }
       return value;
     });
@@ -121,8 +145,61 @@ class Workspace extends ChangeNotifier {
       ...task.toJson(),
       'kind': 'task',
       'state': task.state == TaskState.completed ? 'pending' : 'completed',
+      'completedAt': task.state == TaskState.completed
+          ? null
+          : DateTime.now().toUtc().toIso8601String(),
     }, 'Change task completion');
   }
+
+  Future<bool> recordFocus(Map<String, dynamic> record) =>
+      change('Record task-linked focus', (records) {
+        final old = records[record['id']];
+        final oldTask = old?['taskId'] as String?,
+            newTask = record['taskId'] as String?;
+        if (newTask != null && records[newTask]?['kind'] != 'task')
+          throw StateError('Linked task is no longer available.');
+        final affected = {
+          if (oldTask != null) oldTask,
+          if (newTask != null) newTask,
+        };
+        final before = <String, int>{
+          for (final id in affected)
+            id: records.values
+                .where((r) => r['kind'] == 'focus' && r['taskId'] == id)
+                .fold<num>(0, (n, r) => n + (r['minutes'] as num))
+                .floor(),
+        };
+        records[record['id']] = record;
+        for (final id in affected) {
+          final task = records[id];
+          if (task == null) continue;
+          final after = records.values
+              .where((r) => r['kind'] == 'focus' && r['taskId'] == id)
+              .fold<num>(0, (n, r) => n + (r['minutes'] as num))
+              .floor();
+          records[id] = {
+            ...task,
+            'actualMinutes':
+                ((task['actualMinutes'] as int? ?? 0) + after - before[id]!)
+                    .clamp(0, 10000000),
+          };
+        }
+      });
+
+  Future<bool> saveEventTask(Map<String, dynamic> task, String eventId) =>
+      change('Add event task', (records) {
+        final event = records[eventId];
+        if (event == null || event['kind'] != 'block')
+          throw StateError('This event was removed.');
+        records[task['id']] = task;
+        records[eventId] = {
+          ...event,
+          'relatedTaskIds': {
+            ...List<String>.from(event['relatedTaskIds'] ?? []),
+            task['id'] as String,
+          }.toList(),
+        };
+      });
 
   Future<bool> apply(ScheduleProposal proposal) async {
     if (proposal.revision != snapshot.revision) {
@@ -168,9 +245,19 @@ class Workspace extends ChangeNotifier {
       }
     }
     return change('Approve schedule proposal', (records) {
+      final original = {
+        for (final entry in records.entries.where(
+          (e) => e.value['kind'] == 'block',
+        ))
+          entry.key: entry.value,
+      };
       records.removeWhere((_, r) => r['kind'] == 'block');
       for (final block in proposal.blocks) {
-        records[block.id] = {...block.toJson(), 'kind': 'block'};
+        records[block.id] = {
+          ...?original[block.id],
+          ...block.toJson(),
+          'kind': 'block',
+        };
       }
     });
   }
@@ -248,6 +335,7 @@ void _validateRecord(Map<String, dynamic> record) {
     'expense',
     'measurement',
     'focus',
+    'reflection',
     'settings',
     'batch',
   };
@@ -293,6 +381,13 @@ void _validateRecord(Map<String, dynamic> record) {
       ZoneClock(record['zone']);
       if (record['weeklyMinor'] is! int || record['weeklyMinor'] < 0)
         throw const FormatException('Invalid budget');
+    case 'reflection':
+      ZoneClock().parse('${record['date']} 12:00');
+      if (record['body'] is! String ||
+          record['energy'] is! int ||
+          record['energy'] < 1 ||
+          record['energy'] > 5)
+        throw const FormatException('Invalid reflection');
     case 'focus':
       if (!finite(record['minutes']))
         throw const FormatException('Invalid focus duration');

@@ -1,7 +1,11 @@
 part of 'workspace_shell.dart';
 
 extension _PlanningView on _WorkspaceShellState {
-  Future<void> _task([PlanTask? task]) async {
+  Future<void> _task([
+    PlanTask? task,
+    String? eventId,
+    String? parentId,
+  ]) async {
     final choices = {
       '': 'None',
       if (task?.parentId != null &&
@@ -25,8 +29,10 @@ extension _PlanningView on _WorkspaceShellState {
         EntryField(
           'deadline',
           'True deadline (${clock.name})',
-          value: clock.stamp(
-            task?.deadline ?? clock.now().add(const Duration(days: 2)),
+          value: _editableTime(
+            task?.deadline ??
+                store.blocks.where((b) => b.id == eventId).firstOrNull?.end ??
+                clock.now().add(const Duration(days: 2)),
           ),
         ),
         EntryField(
@@ -37,7 +43,7 @@ extension _PlanningView on _WorkspaceShellState {
         EntryField(
           'parent',
           'Parent task',
-          value: task?.parentId ?? '',
+          value: task?.parentId ?? parentId ?? '',
           choices: choices,
           optional: true,
         ),
@@ -104,7 +110,7 @@ extension _PlanningView on _WorkspaceShellState {
         if (priority == null || priority < 1 || priority > 5)
           return 'Importance must be 1–5.';
         if (task != null &&
-            v['deadline'] != clock.stamp(task.deadline) &&
+            v['deadline'] != _editableTime(task.deadline) &&
             v['reason']!.isEmpty)
           return 'Give the reason/source for a true deadline change.';
         // Ancestor cycles would make weighted progress and hierarchy ambiguous.
@@ -123,7 +129,8 @@ extension _PlanningView on _WorkspaceShellState {
       id: id,
       title: fields['title']!,
       minutes: int.parse(fields['minutes']!),
-      deadline: task != null && fields['deadline'] == clock.stamp(task.deadline)
+      deadline:
+          task != null && fields['deadline'] == _editableTime(task.deadline)
           ? task.deadline
           : clock.parse(fields['deadline']!),
       priority: int.parse(fields['priority']!),
@@ -135,13 +142,21 @@ extension _PlanningView on _WorkspaceShellState {
       minimumBlock: int.parse(fields['minimum']!),
       splittable: fields['split'] == 'yes',
     );
-    await store.put({
+    final record = <String, dynamic>{
       ...?store.snapshot.records[id],
       ...next.toJson(),
       'kind': 'task',
       'deadlineReason': fields['reason'],
       'projectId': fields['projectId'],
-    }, task == null ? 'Create task' : 'Edit task: ${fields['reason']}');
+    };
+    if (eventId != null) {
+      await store.saveEventTask(record, eventId);
+    } else {
+      await store.put(
+        record,
+        task == null ? 'Create task' : 'Edit task: ${fields['reason']}',
+      );
+    }
   }
 
   Future<void> _goal([Map<String, dynamic>? goal]) async {
@@ -252,10 +267,6 @@ extension _PlanningView on _WorkspaceShellState {
   Widget _plan() => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      heading(
-        'A plan that\ncan change.',
-        'Fixed commitments stay fixed. Optimizer changes are proposals until you approve.',
-      ),
       Wrap(
         spacing: 12,
         runSpacing: 12,
@@ -266,78 +277,54 @@ extension _PlanningView on _WorkspaceShellState {
           ),
           OutlinedButton(
             onPressed: () => _block(),
-            child: const Text('Add a commitment'),
-          ),
-          OutlinedButton(
-            onPressed: () => _task(),
-            child: const Text('Add a task'),
-          ),
-          OutlinedButton(
-            onPressed: _project,
-            child: const Text('Add a project'),
+            child: const Text('Create event'),
           ),
         ],
       ),
       const SizedBox(height: 24),
-      for (final project in store.of('project'))
-        panel(
-          line(
-            project['title'],
-            project['body'] ?? '',
-            action: TextButton(
-              onPressed: () => _project(project),
-              child: const Text('Edit project'),
-            ),
-          ),
-        ),
-      Text(
-        'Tasks & subtasks',
-        style: Theme.of(context).textTheme.headlineMedium,
-      ),
-      const SizedBox(height: 16),
-      for (final task in store.tasks) _taskCard(task),
-      if (store.tasks.isEmpty) const Text('No tasks yet.'),
+      _calendar(),
       const SizedBox(height: 24),
-      Text('Time blocks', style: Theme.of(context).textTheme.headlineMedium),
-      for (final block
-          in (store.blocks..sort((a, b) => a.start.compareTo(b.start))))
-        panel(
-          line(
-            block.title,
-            '${clock.stamp(block.start)} → ${clock.stamp(block.end)}\n${block.source} · ${block.fixed
-                ? 'Fixed'
-                : block.pinned
-                ? 'Pinned'
-                : 'Flexible'}',
-            action: Wrap(
-              children: [
-                TextButton(
-                  onPressed: () => _block(block),
-                  child: const Text('Edit / move'),
-                ),
-                if (!block.fixed && block.source == 'LifeOS')
-                  TextButton(
-                    onPressed: () => store.put({
-                      ...block.toJson(),
-                      'kind': 'block',
-                      'pinned': !block.pinned,
-                    }, 'Change block pin'),
-                    child: Text(block.pinned ? 'Unpin' : 'Pin time'),
-                  ),
-                TextButton(
-                  onPressed: () async {
-                    if (await confirm(
-                      'Remove block?',
-                      'This does not mark its task complete or change the deadline.',
-                    ))
-                      await store.remove(block.id);
-                  },
-                  child: const Text('Remove'),
-                ),
-              ],
-            ),
-          ),
+      ExpansionTile(
+        expansionAnimationStyle: AnimationStyle(
+          duration: motionDuration(context),
         ),
+        title: const Text('Backlog & projects'),
+        children: [
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton(
+                onPressed: () => _task(),
+                child: const Text('Add a task'),
+              ),
+              OutlinedButton(
+                onPressed: _project,
+                child: const Text('Add a project'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          for (final project in store.of('project'))
+            panel(
+              line(
+                project['title'],
+                project['body'] ?? '',
+                action: TextButton(
+                  onPressed: () => _project(project),
+                  child: const Text('Edit project'),
+                ),
+              ),
+            ),
+          Text(
+            'Tasks & subtasks',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 16),
+          for (final task in store.tasks) _taskCard(task),
+          if (store.tasks.isEmpty) const Text('No tasks yet.'),
+        ],
+      ),
     ],
   );
   Future<void> _project([Map<String, dynamic>? project]) async {
@@ -359,7 +346,7 @@ extension _PlanningView on _WorkspaceShellState {
       }, 'Save project');
   }
 
-  Future<void> _block([PlanBlock? block]) async {
+  Future<void> _block([PlanBlock? block, String? localStart]) async {
     final now = clock.now();
     final fields = await entryForm(
       context,
@@ -369,12 +356,16 @@ extension _PlanningView on _WorkspaceShellState {
         EntryField(
           'start',
           'Start (${clock.name})',
-          value: clock.stamp(block?.start ?? now),
+          value: localStart ?? _editableTime(block?.start ?? now),
         ),
         EntryField(
           'end',
           'End (${clock.name})',
-          value: clock.stamp(block?.end ?? now.add(const Duration(hours: 1))),
+          value: block != null
+              ? _editableTime(block.end)
+              : localStart != null
+              ? _eventEnd(localStart)
+              : _editableTime(now.add(const Duration(hours: 1))),
         ),
         EntryField(
           'task',
@@ -388,6 +379,14 @@ extension _PlanningView on _WorkspaceShellState {
             for (final task in resolveHierarchy(store.tasks).leaves)
               task.id: task.title,
           },
+        ),
+        EntryField(
+          'related',
+          'Event tasks / task groups',
+          value: jsonEncode(block?.relatedTaskIds ?? []),
+          optional: true,
+          multiple: true,
+          choices: {for (final task in store.tasks) task.id: task.title},
         ),
         EntryField(
           'fixed',
@@ -421,9 +420,28 @@ extension _PlanningView on _WorkspaceShellState {
         pinned: fields['fixed'] == 'flexible',
         taskId: fields['task']!.isEmpty ? null : fields['task'],
         source: block?.source ?? 'LifeOS',
+        relatedTaskIds: List<String>.from(jsonDecode(fields['related']!)),
       ).toJson(),
       'kind': 'block',
     }, 'Manually edit time block');
+  }
+
+  String _editableTime(DateTime instant) {
+    final text = clock.stamp(instant);
+    try {
+      clock.parse(text);
+      return text;
+    } catch (_) {
+      return instant.toUtc().toIso8601String();
+    }
+  }
+
+  String _eventEnd(String start) {
+    try {
+      return _editableTime(clock.parse(start).add(const Duration(hours: 1)));
+    } catch (_) {
+      return start;
+    }
   }
 
   Future<void> _propose() async {

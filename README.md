@@ -6,6 +6,10 @@ deployed backend, real credentials, or paid service is required for basic use.
 
 ## What you can test
 
+The [Home/calendar guide](docs/calendar-home-redesign.md) explains timeline event
+creation, linked subtasks, today's to-dos, current-state scoring, Gemini fallback,
+and task-linked focus/reflections.
+
 - **Today / Plan:** goals, projects, nested tasks, effort-weighted progress,
   deadlines, prerequisites, fixed/pinned blocks, habits and explicit availability.
   A deterministic scheduler preserves commitments, reserves free time, reports
@@ -38,7 +42,8 @@ until separately configured and verified; they are never simulated as connected.
    use Flutter **3.47.8 / Dart 3.13.7**. Add Flutter `bin` to PATH; use its bundled
    Dart. PDF support now needs this newer SDK. Check `flutter --version`.
 2. Install **Visual Studio** with **Desktop development with C++** and a Windows
-   SDK. Visual Studio Code alone is insufficient. Enable Windows Developer Mode
+   SDK. Visual Studio Code alone is insufficient. Install **C++ ATL for x64/x86**
+   matching the installed MSVC toolset as well; the secure-storage plugin needs it. Enable Windows Developer Mode
    if Flutter requests symlink support for plugins.
 3. Install Chrome for browser testing. Install Android Studio, an Android SDK
    and emulator (or use USB debugging on your phone) for Android testing.
@@ -148,8 +153,9 @@ currently eligible for free use **without billing** and review its data-use term
 Quotas/model availability change. A configuration flag cannot verify your Google
 billing settings; the gateway refuses generation until you explicitly attest to
 free/no-billing configuration. No live Gemini request has been verified yet.
-An exact model called “Gemini Flash 3.8” has not been verified; do not use invented
-IDs. Model discovery instructions are in the gateway guide.
+Your supplied pricing text identifies `gemini-3.8-flash` as the intended model.
+Its availability/free eligibility still needs verification against your project.
+Model discovery instructions are in the gateway guide.
 
 For interface testing with zero credentials, use **Coach → Try chat demo (offline)**.
 Every result says it is a demo and not live AI. The optional loopback mock server

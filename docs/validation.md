@@ -6,9 +6,9 @@ capability or a production release.
 
 | Executed check | Result |
 |---|---|
-| Dart formatting, lib/test/integration_test/tool | 51 files checked; no formatting changes required |
+| Dart formatting, lib/test/integration_test/tool | 62 files checked; no formatting changes required |
 | `flutter analyze` | No issues |
-| `flutter test --concurrency=2` | **73 passed**, no skipped/disabled tests |
+| `flutter test --concurrency=2` | **90 passed**, no skipped/disabled tests |
 | `node --test server/gemini-worker.test.mjs` | **6 passed** using synthetic provider responses |
 | `dart run tool/bootstrap.dart`, repeated | Passed; existing runners preserved, SQLite web assets verified; documented Android INTERNET/automatic-backup settings applied |
 | `flutter build web --no-web-resources-cdn` | Passed; browser engine/fonts/PDF/SQLite assets served locally |
@@ -87,3 +87,29 @@ Create/reload a task; keep a fixed block while approving a plan; import each
 synthetic fixture twice; try the source recall and offline chat; add measurements
 and expenses; export/restore a backup; change appearance and restart; test enlarged
 text and narrow windows. Use a separate demo database for destructive data tests.
+
+## Home/calendar redesign verification
+
+- `flutter analyze`: no issues; full suite: **90 Flutter tests passed**. An additional
+  targeted run after the final calendar card/now-line visual adjustment passed all
+  **15 affected UI/calendar tests**. Six existing gateway protocol tests also pass.
+- Release web build and Android ARM64 debug build passed after the redesign.
+  Only the existing nonfatal PDF-package icon-font warning remains in web output.
+- New tests cover local current-state scoring (including partial effort, future
+  exclusions and insufficient evidence), aggregate-only Gemini payloads, malformed/
+  demo/provider-error fallback, atomic event/subtask linking, preserving event task
+  groups during scheduling, idempotent task-linked focus and reduced motion.
+- Calendar tests cover time-slot creation, Week/Month navigation, overlapping lanes,
+  midnight clipping and DST 23/25-hour days. Repeated hours have distinct explicit
+  instants and offset labels, rather than silently normalizing either occurrence.
+- Browser checks use synthetic records only. The local 50/100 score, overlapping
+  event rendering, nested event tasks and a saved linked subtask were verified in
+  Chromium. Week/Month/Day switching and mobile rendering passed with no JavaScript
+  page errors. Screenshots are in docs/design/screenshots.
+- Live Gemini and third-party account sync remain unverified because no server key,
+  account connection or deployment is configured. Mock response tests establish the
+  UI/protocol boundary, not a live model or its free-tier eligibility. Windows and
+  physical Android interactions remain unrun on this Linux host.
+- Source code for every changed file is provided as a complete-file text/ZIP bundle,
+  with a SHA-256 manifest; generated platform runners, local lockfiles, credentials
+  and private uploaded exports are excluded.

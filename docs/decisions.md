@@ -177,3 +177,17 @@
 - Added a one-request, fixed-prompt direct check for Bash troubleshooting. It needs
   explicit free-project confirmation and an environment-held key, and never prints
   raw provider output. Cloud tests had no real key or deployed Worker access.
+
+## Current model access guidance — 26 October 2026
+
+- Official Google model/pricing/deprecation pages were retrieved and checked.
+  3.8 Flash and 3.5 Flash-Lite list free-tier standard input/output, subject to
+  account/region/quota eligibility. This is documentation verification, not a
+  successful live account test.
+- Google limits 2.5 Flash/Flash-Lite access to previously active users and recommends
+  3.5 Flash-Lite or 3.8 Flash for new projects. The user's 2.5 generation 404s are
+  consistent with that restriction. The earlier suggestion to test 2.5 for this new
+  project was corrected; the models are not declared shut down.
+- The user's direct 3.8 probe continues to return 503. Offer one explicit manual
+  test of the documented 3.5 Flash-Lite alternative; never change the deployed
+  model automatically. No live key, remote configuration or app source was changed.

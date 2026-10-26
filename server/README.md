@@ -29,9 +29,19 @@ verification. The code cannot prevent charges if you supply a billed project.
 There is no automatic provider/model fallback or retry. Quota/auth/provider errors
 leave local workflows available. Stop using live generation if free access ceases.
 
-The user-supplied pricing text identifies `gemini-3.8-flash` as the intended model.
-Confirm that exact ID in your account's model list and verify its current free
-eligibility separately; no live request has independently established that here.
+Google's official [model catalog](https://ai.google.dev/gemini-api/docs/models) and
+[pricing](https://ai.google.dev/gemini-api/docs/pricing), checked 26 October 2026,
+list `gemini-3.8-flash` (the user's intended model) and `gemini-3.5-flash-lite` with
+free-tier standard input/output. Account/region eligibility and usable quota still
+need checking; no successful credential-backed generation was verified here.
+
+**New projects:** Google's catalog and
+[deprecation guidance](https://ai.google.dev/gemini-api/docs/deprecations) restrict
+2.5 Flash/Flash-Lite access to users who actively used them previously. They are
+not shut down, but a new project may see them in discovery and receive generation
+404. Use the documented new-project choices, 3.5 Flash-Lite or 3.8 Flash. Do not
+infer project access from discovery alone or automatically switch models.
+
 With `GEMINI_API_KEY` configured securely in the server environment:
 
 ```powershell
@@ -153,6 +163,15 @@ confirmation flag cannot verify billing. Missing configuration sends no request.
 | `gemini_output_limit` | Output budget was exhausted; request a shorter answer. Further budget configuration needs the model's documented capabilities. |
 | `gemini_blocked` / `gemini_empty` | Try a short text-only question and check model compatibility. |
 | `gateway_timeout` / `gemini_unavailable` | Timeout/provider failure; no automatic retry occurred. |
+
+If 3.8 repeatedly returns 503, a manual diagnostic run with
+`LIFEOS_AI_MODEL=gemini-3.5-flash-lite` can check the current recommended alternative.
+If it succeeds and you choose to use it, update the Worker's `LIFEOS_AI_MODEL`,
+deploy the variable change, and reconnect LifeOS with the existing URL/token to
+refresh its displayed model. Do not test 2.5 as a default fallback for a new project.
+Google's [API error guidance](https://ai.google.dev/gemini-api/docs/api-errors)
+describes 503 as temporary overload/downtime; this does not establish a wider outage
+or prove that every error body came from a structured Google RPC response.
 
 The updated Worker returns allowlisted codes and an upstream HTTP status, never raw
 Google errors that could contain keys/prompts/account metadata. Flutter displays the

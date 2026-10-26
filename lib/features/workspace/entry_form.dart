@@ -12,11 +12,13 @@ class EntryField {
     this.choices,
     this.multiple = false,
     this.obscure = false,
+    this.builder,
   });
   final String key, label, value;
   final bool optional, multiple, obscure;
   final int lines;
   final Map<String, String>? choices;
+  final Widget Function(BuildContext, String, ValueChanged<String>)? builder;
 }
 
 Future<Map<String, String>?> entryForm(
@@ -113,7 +115,22 @@ class _EntryDialogState extends State<_EntryDialog> {
               for (final field in widget.fields)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16),
-                  child: field.multiple
+                  child: field.builder != null
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(field.label),
+                            const SizedBox(height: 8),
+                            field.builder!(
+                              context,
+                              _controllers[field.key]!.text,
+                              (value) => setState(
+                                () => _controllers[field.key]!.text = value,
+                              ),
+                            ),
+                          ],
+                        )
+                      : field.multiple
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

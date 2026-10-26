@@ -30,10 +30,22 @@ List<ExerciseSummary> trainingSummary(
   bool includeWarmups = false,
 }) {
   final groups = <String, List<Map<String, dynamic>>>{};
+  final aliases = {
+    for (final alias in records.where((r) => r['kind'] == 'exercise_alias'))
+      '${alias['provider']}\u0000${alias['exercise']}':
+          alias['canonical'] as String,
+  };
   for (final row in records.where((r) => r['kind'] == 'workout')) {
     if (!includeWarmups && row['setType'] == 'warmup') continue;
-    final key = '${row['source']}\u0000${row['exercise']}';
-    groups.putIfAbsent(key, () => []).add(row);
+    final provider = row['source'] ?? 'Imported';
+    final canonical =
+        aliases['$provider\u0000${row['exercise']}'] ?? row['exercise'];
+    final key = '$provider\u0000$canonical';
+    groups.putIfAbsent(key, () => []).add({
+      ...row,
+      'source': provider,
+      'exercise': canonical,
+    });
   }
   return [for (final rows in groups.values) _exerciseSummary(rows)]..sort(
     (a, b) =>
@@ -92,6 +104,10 @@ class NutritionSummary {
 }
 
 List<NutritionSummary> nutritionSummary(List<Map<String, dynamic>> records) {
+  final confirmations = {
+    for (final row in records.where((r) => r['kind'] == 'nutrition_day'))
+      row['date']: row['complete'] == true,
+  };
   final groups = <String, List<Map<String, dynamic>>>{};
   for (final row in records.where((r) => r['kind'] == 'nutrition')) {
     groups.putIfAbsent(row['date'], () => []).add(row);
@@ -108,7 +124,60 @@ List<NutritionSummary> nutritionSummary(List<Map<String, dynamic>> records) {
         sum(entry.value, 'carbs'),
         sum(entry.value, 'fat'),
         sum(entry.value, 'protein'),
-        entry.value.any((r) => r['partial'] != false),
+        confirmations.containsKey(entry.key)
+            ? !confirmations[entry.key]!
+            : entry.value.any((r) => r['partial'] != false),
       ),
   ]..sort((a, b) => a.date.compareTo(b.date));
+}
+
+/// Periods are calendar dates, not elapsed DST hours. Missing days stay unknown.
+class NutritionPeriod {
+  const NutritionPeriod(this.days, this.missingDays);
+  final List<NutritionSummary> days;
+  final int missingDays;
+  int get completeDays => days.where((d) => !d.partial).length;
+  num? get recordedCalories =>
+      days.isEmpty ? null : days.fold<num>(0, (n, d) => n + d.calories);
+  double? get recordedDayAverage =>
+      days.isEmpty ? null : recordedCalories! / days.length;
+  num? macro(String name) {
+    if (days.isEmpty) return null;
+    final values = days
+        .map(
+          (d) => switch (name) {
+            'protein' => d.protein,
+            'carbs' => d.carbs,
+            'fat' => d.fat,
+            _ => null,
+          },
+        )
+        .toList();
+    return values.any((v) => v == null)
+        ? null
+        : values.fold<num>(0, (n, v) => n + v!);
+  }
+}
+
+NutritionPeriod nutritionPeriod(
+  List<NutritionSummary> days,
+  DateTime from,
+  DateTime until,
+) {
+  String key(DateTime date) =>
+      '${date.year.toString().padLeft(4, '0')}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+  final first = DateTime.utc(from.year, from.month, from.day),
+      last = DateTime.utc(until.year, until.month, until.day);
+  if (!last.isAfter(first)) throw ArgumentError('Period end must follow start');
+  final included = days
+      .where(
+        (d) =>
+            d.date.compareTo(key(first)) >= 0 &&
+            d.date.compareTo(key(last)) < 0,
+      )
+      .toList();
+  return NutritionPeriod(
+    included,
+    (last.difference(first).inDays - included.length).clamp(0, 10000000),
+  );
 }

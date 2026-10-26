@@ -140,3 +140,26 @@
 - Native Windows/device validation and live Gemini activation remain explicit
   acceptance work. Cloud Linux tests, web builds and mocked gateway checks do not
   establish those capabilities. See validation.md for commands actually executed.
+
+## Inline calendar tasks and continued offline work — 26 October 2026
+
+- The user requested first-tap inline expansion instead of a detail sheet, fully
+  rounded controls, more event colors, and continued work without more phase gates.
+  The shared calendar card now expands in Day/Week/Agenda; the detail sheet remains
+  an explicit secondary action. Expanded content never changes event instants.
+- Nine named light/dark event palettes are category choices, independent of status
+  or urgency. Text pairings pass normal-text AA contrast. The saved color ID is
+  backward-compatible and is preserved by the scheduler and JSON backups.
+- All Material button states retain capsule shapes; icon controls are circular.
+  Calendar changes and inline expansion use eased, reduced-motion-aware animation.
+- Continued offline scope adds personal nutrition targets, reviewed completeness,
+  week/month food summaries, and editable provider-specific exercise aliases.
+  Food changes invalidate completeness; restore preserves the backed-up review.
+  Raw workout rows remain unchanged. No package was added.
+- Planning now compares three deterministic policies using explicit ranked metrics.
+  Every candidate retains hard constraints, revision checks and separate approval.
+  Spread-work limits are a soft policy, not proof that an otherwise feasible plan
+  is impossible, and the policies do not claim globally optimal schedules.
+- Native device acceptance, live Gemini activation and account integrations remain
+  unverified. status.md remains the traceable full-spec backlog; passing tests does
+  not turn incomplete modules or unavailable connections into completed features.

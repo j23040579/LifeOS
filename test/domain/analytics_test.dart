@@ -59,4 +59,100 @@ void main() {
     expect(days.single.protein, isNull);
     expect(days.single.partial, isTrue);
   });
+  test(
+    'approved aliases combine only one provider and preserve source rows',
+    () {
+      final original = row('Hevy', 'a', 1, 20);
+      final renamed = {...row('Hevy', 'b', 2, 22), 'exercise': 'Bench Press'};
+      final summaries = trainingSummary([
+        original,
+        renamed,
+        row('Other', 'a', 1, 30),
+        {
+          'kind': 'exercise_alias',
+          'provider': 'Hevy',
+          'exercise': 'Press',
+          'canonical': 'Bench Press',
+        },
+      ]);
+      expect(summaries.length, 2);
+      expect(summaries.first.exercise, 'Bench Press');
+      expect(summaries.first.sessions, 2);
+      expect(summaries.first.volumeKgReps, 420);
+      expect(summaries.last.provider, 'Other');
+      expect(summaries.last.exercise, 'Press');
+      expect(original['exercise'], 'Press');
+      expect(renamed['exercise'], 'Bench Press');
+    },
+  );
+  test('legacy provider fallback can be mapped explicitly', () {
+    final legacy = row('Hevy', 'a', 1, 20)..remove('source');
+    final summary = trainingSummary([
+      legacy,
+      {
+        'kind': 'exercise_alias',
+        'provider': 'Imported',
+        'exercise': 'Press',
+        'canonical': 'Chest press',
+      },
+    ]).single;
+    expect(summary.provider, 'Imported');
+    expect(summary.exercise, 'Chest press');
+    expect(legacy.containsKey('source'), false);
+  });
+  test(
+    'food completeness overrides can mark a source-complete day partial',
+    () {
+      final food = {
+        'kind': 'nutrition',
+        'date': '2026-10-01',
+        'calories': 120,
+        'partial': false,
+      };
+      expect(nutritionSummary([food]).single.partial, false);
+      expect(
+        nutritionSummary([
+          food,
+          {'kind': 'nutrition_day', 'date': '2026-10-01', 'complete': false},
+        ]).single.partial,
+        true,
+      );
+      final confirmed = nutritionSummary([
+        {...food, 'partial': true},
+        {'kind': 'nutrition_day', 'date': '2026-10-01', 'complete': true},
+      ]).single;
+      expect(confirmed.partial, false);
+      expect(confirmed.protein, isNull);
+    },
+  );
+  test('period averages exclude missing dates and retain unknown macros', () {
+    final period = nutritionPeriod(
+      [
+        const NutritionSummary('2026-10-01', 1000, 100, 20, 60, true),
+        const NutritionSummary('2026-10-03', 2000, 200, null, 100, false),
+        const NutritionSummary('2026-11-01', 4000, 400, 80, 120, false),
+      ],
+      DateTime.utc(2026, 10),
+      DateTime.utc(2026, 11),
+    );
+    expect(period.days.length, 2);
+    expect(period.missingDays, 29);
+    expect(period.completeDays, 1);
+    expect(period.recordedCalories, 3000);
+    expect(period.recordedDayAverage, 1500);
+    expect(period.macro('protein'), 160);
+    expect(period.macro('fat'), isNull);
+    final empty = nutritionPeriod(
+      [],
+      DateTime.utc(2026),
+      DateTime.utc(2026, 1, 8),
+    );
+    expect(empty.recordedCalories, isNull);
+    expect(empty.recordedDayAverage, isNull);
+    expect(empty.missingDays, 7);
+    expect(
+      () => nutritionPeriod([], DateTime.utc(2026), DateTime.utc(2025)),
+      throwsArgumentError,
+    );
+  });
 }

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../../core/design/design_tokens.dart';
 import '../../core/design/motion.dart';
+import '../../core/design/event_colors.dart';
+import 'calendar_event_card.dart';
 import '../../domain/calendar_geometry.dart';
 import '../../domain/clock.dart';
 import '../../domain/planning.dart';
@@ -17,6 +19,8 @@ class CalendarTimeline extends StatefulWidget {
     required this.onOpen,
     this.initialDate,
     this.onDateChanged,
+    this.tasks = const [],
+    this.eventBodyBuilder,
   });
   final ZoneClock clock;
   final List<PlanBlock> blocks;
@@ -24,11 +28,78 @@ class CalendarTimeline extends StatefulWidget {
   final ValueChanged<PlanBlock> onOpen;
   final DateTime? initialDate;
   final ValueChanged<DateTime>? onDateChanged;
+  final List<PlanTask> tasks;
+  final Widget Function(PlanBlock)? eventBodyBuilder;
   @override
   State<CalendarTimeline> createState() => _CalendarTimelineState();
 }
 
-class _CalendarTimelineState extends State<CalendarTimeline> {
+class _CalendarTimelineState extends State<CalendarTimeline>
+    with SingleTickerProviderStateMixin {
+  String? _expandedId;
+  String? _expandedDay;
+  final _expandedKey = GlobalKey();
+  late final AnimationController _expansion = AnimationController(vsync: this)
+    ..addStatusListener((status) {
+      if (status == AnimationStatus.dismissed && mounted)
+        setState(() => _expandedId = null);
+    });
+  late final CurvedAnimation _expansionCurve = CurvedAnimation(
+    parent: _expansion,
+    curve: Curves.easeOutCubic,
+    reverseCurve: Curves.easeInCubic,
+  );
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _expansion.duration = motionDuration(context);
+    _expansion.reverseDuration = motionDuration(context, milliseconds: 180);
+  }
+
+  @override
+  void didUpdateWidget(CalendarTimeline oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_expandedId != null && !widget.blocks.any((b) => b.id == _expandedId)) {
+      _expansion.stop();
+      _expandedId = null;
+    }
+  }
+
+  @override
+  void dispose() {
+    _expansionCurve.dispose();
+    _expansion.dispose();
+    super.dispose();
+  }
+
+  bool _isExpanded(PlanBlock block, DateTime day) =>
+      _expandedId == block.id && _expandedDay == widget.clock.day(day);
+  void _toggleEvent(PlanBlock block, DateTime day) {
+    if (_isExpanded(block, day)) {
+      if (_expansion.status == AnimationStatus.reverse)
+        _expansion.forward();
+      else
+        _expansion.reverse();
+      return;
+    }
+    _expansion.stop();
+    _expansion.value = 0;
+    setState(() {
+      _expandedId = block.id;
+      _expandedDay = widget.clock.day(day);
+    });
+    _expansion.forward();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _expandedKey.currentContext;
+      if (mounted && target != null)
+        Scrollable.ensureVisible(
+          target,
+          duration: motionDuration(context),
+          alignment: .08,
+        );
+    });
+  }
+
   late DateTime date = widget.initialDate ?? widget.clock.now();
   CalendarView view = CalendarView.day;
   bool agenda = false;
@@ -57,6 +128,11 @@ class _CalendarTimelineState extends State<CalendarTimeline> {
 
   String label(DateTime date) =>
       '${weekdays[date.weekday - 1]} · ${widget.clock.day(date)}';
+  void _openDate(DateTime day) => setState(() {
+    date = day;
+    widget.onDateChanged?.call(date);
+    view = CalendarView.day;
+  });
   @override
   Widget build(BuildContext context) {
     final large = MediaQuery.textScalerOf(context).scale(16) > 24;
@@ -144,13 +220,15 @@ class _CalendarTimelineState extends State<CalendarTimeline> {
         const SizedBox(height: 16),
         Text(
           view == CalendarView.day && !agenda && !large
-              ? 'Tap an empty hour to create an event. Tap an event to see its tasks.'
-              : 'Tap a date to open its timeline; tap an event to see its tasks.',
+              ? 'Tap an empty hour to create an event. Tap an event to expand its tasks here.'
+              : 'Tap a date to open its timeline; tap an event to expand its tasks here.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 16),
         AnimatedSwitcher(
           duration: motionDuration(context),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
           layoutBuilder: (current, previous) =>
               current ?? const SizedBox.shrink(),
           child: KeyedSubtree(
@@ -168,38 +246,37 @@ class _CalendarTimelineState extends State<CalendarTimeline> {
     );
   }
 
-  Widget _event(PlanBlock block) => Padding(
-    padding: const EdgeInsets.only(top: 8),
-    child: Material(
-      color: EditorialPalette.of(context).brandSurface,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => widget.onOpen(block),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(block.title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Text(
-                '${widget.clock.stamp(block.start)} → ${widget.clock.stamp(block.end)}',
-              ),
-              Text(
-                '${block.source} · ${block.immovable ? 'Fixed / pinned' : 'Flexible'} · Tap for tasks',
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ),
+  Widget _event(PlanBlock block, DateTime day) {
+    final expanded = _isExpanded(block, day);
+    return Padding(
+      key: expanded
+          ? _expandedKey
+          : ValueKey('${widget.clock.day(day)}-${block.id}'),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: CalendarEventCard(
+        event: block,
+        clock: widget.clock,
+        tasks: widget.tasks,
+        expanded: expanded,
+        animation: expanded
+            ? _expansionCurve
+            : const AlwaysStoppedAnimation<double>(0),
+        onToggle: () => _toggleEvent(block, day),
+        onDetails: () => widget.onOpen(block),
+        body: expanded
+            ? widget.eventBodyBuilder?.call(block) ??
+                  const Text(
+                    'No task data available. Use Event details to edit this event.',
+                  )
+            : const SizedBox.shrink(),
       ),
-    ),
-  );
+    );
+  }
+
   Widget _agenda(DateTime day) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      for (final block in events(day)) _event(block),
+      for (final block in events(day)) _event(block, day),
       if (events(day).isEmpty)
         const Padding(
           padding: EdgeInsets.all(16),
@@ -289,6 +366,7 @@ class _CalendarTimelineState extends State<CalendarTimeline> {
     return Semantics(
       label: '${label(day)}, $count events',
       button: true,
+      onTap: () => _openDate(day),
       excludeSemantics: true,
       child: Material(
         color: day.month == date.month
@@ -297,11 +375,7 @@ class _CalendarTimelineState extends State<CalendarTimeline> {
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           borderRadius: BorderRadius.circular(12),
-          onTap: () => setState(() {
-            date = day;
-            widget.onDateChanged?.call(date);
-            view = CalendarView.day;
-          }),
+          onTap: () => _openDate(day),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 2),
             child: Column(
@@ -329,129 +403,270 @@ class _CalendarTimelineState extends State<CalendarTimeline> {
     final scrollHour = widget.clock.day(date) == widget.clock.day(now)
         ? (now.difference(day.start).inHours - 1).clamp(0, 20)
         : 7;
+    final selected = placements
+        .where((p) => _isExpanded(p.block, date))
+        .firstOrNull;
+    final total = day.minutes / 60 * 64 + 48;
+    final anchor = selected == null ? 0.0 : selected.startMinute / 60 * 64;
     return SizedBox(
       height: 600,
       child: _DayScroll(
         key: ValueKey('${widget.clock.day(date)}-${widget.clock.name}'),
         offset: scrollHour * 64.0,
         child: LayoutBuilder(
-          builder: (context, constraints) {
-            final width = (constraints.maxWidth - 64).clamp(
-              1.0,
-              double.infinity,
-            );
-            return SizedBox(
-              height: day.minutes / 60 * 64 + 48,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  for (var minute = 0; minute < day.minutes; minute += 60)
-                    Positioned(
-                      top: minute / 60 * 64,
-                      left: 0,
-                      right: 0,
-                      height: 64,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+          builder: (context, constraints) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (selected == null)
+                _daySegment(
+                  day,
+                  placements,
+                  date,
+                  constraints.maxWidth,
+                  0,
+                  total,
+                  null,
+                )
+              else ...[
+                if (anchor > 0)
+                  _daySegment(
+                    day,
+                    placements,
+                    date,
+                    constraints.maxWidth,
+                    0,
+                    anchor,
+                    selected.block.id,
+                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(
+                      width: 64,
+                      child: Padding(
+                        padding: EdgeInsets.only(top: 24),
+                        child: Text('Tasks', style: TextStyle(fontSize: 12)),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          SizedBox(
-                            width: 64,
+                          _event(selected.block, date),
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 12),
                             child: Text(
-                              calendarHourLabel(
-                                widget.clock,
-                                day,
-                                day.start.add(Duration(minutes: minute)),
-                              ),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                          Expanded(
-                            child: Semantics(
-                              button: true,
-                              label:
-                                  'Create event ${calendarCreateTime(widget.clock, day, day.start.add(Duration(minutes: minute)))}',
-                              child: InkWell(
-                                onTap: () => widget.onCreate(
-                                  calendarCreateTime(
-                                    widget.clock,
-                                    day,
-                                    day.start.add(Duration(minutes: minute)),
-                                  ),
-                                ),
-                                child: Container(
-                                  height: 64,
-                                  decoration: BoxDecoration(
-                                    border: Border(
-                                      top: BorderSide(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .outlineVariant,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              'Event time is unchanged. The timeline continues below.',
+                              style: TextStyle(fontSize: 12),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  if (!now.isBefore(day.start) && now.isBefore(day.end))
-                    Positioned(
-                      top: now.difference(day.start).inSeconds / 3600 * 64,
-                      left: 54,
-                      right: 0,
-                      child: IgnorePointer(
-                        child: Container(
-                          height: 2,
-                          color: EditorialPalette.of(context).brandText,
-                        ),
+                  ],
+                ),
+                _daySegment(
+                  day,
+                  placements,
+                  date,
+                  constraints.maxWidth,
+                  anchor,
+                  total - anchor,
+                  selected.block.id,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Details occupy a separate flow row between time-grid segments. They never
+  // cover neighboring events or alter the event's scheduled start/end instants.
+  Widget _daySegment(
+    CalendarDay day,
+    List<CalendarPlacement> placements,
+    DateTime date,
+    double width,
+    double from,
+    double height,
+    String? expandedId,
+  ) {
+    if (height <= 0) return const SizedBox.shrink();
+    final total = day.minutes / 60 * 64 + 48;
+    return ClipRect(
+      child: SizedBox(
+        height: height,
+        child: OverflowBox(
+          alignment: Alignment.topLeft,
+          minHeight: total,
+          maxHeight: total,
+          child: Transform.translate(
+            offset: Offset(0, -from),
+            child: SizedBox(
+              height: total,
+              width: width,
+              child: _dayCanvas(
+                day,
+                placements,
+                date,
+                width,
+                from,
+                from + height,
+                expandedId,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dayCanvas(
+    CalendarDay day,
+    List<CalendarPlacement> placements,
+    DateTime date,
+    double canvasWidth,
+    double visibleFrom,
+    double visibleUntil,
+    String? expandedId,
+  ) {
+    final width = (canvasWidth - 64).clamp(1.0, double.infinity),
+        now = widget.clock.now();
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        for (var minute = 0; minute < day.minutes; minute += 60)
+          if (minute / 60 * 64 + 64 > visibleFrom &&
+              minute / 60 * 64 < visibleUntil)
+            Positioned(
+              top: minute / 60 * 64,
+              left: 0,
+              right: 0,
+              height: 64,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: 64,
+                    child: Text(
+                      calendarHourLabel(
+                        widget.clock,
+                        day,
+                        day.start.add(Duration(minutes: minute)),
                       ),
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                  for (final place in placements)
-                    Positioned(
-                      top: place.startMinute / 60 * 64,
-                      left: 64 + place.column * width / place.columns + 2,
-                      width: (width / place.columns - 4).clamp(
-                        1.0,
-                        double.infinity,
-                      ),
-                      height: (place.minutes / 60 * 64 - 2).clamp(
-                        48.0,
-                        double.infinity,
-                      ),
-                      child: Semantics(
-                        button: true,
-                        label:
-                            '${place.block.title}, ${widget.clock.stamp(place.block.start)} to ${widget.clock.stamp(place.block.end)}, ${place.block.source}, ${place.block.immovable ? 'fixed or pinned' : 'flexible'}. Open event tasks',
-                        excludeSemantics: true,
-                        child: Material(
-                          color: EditorialPalette.of(context).brandSurface,
-                          borderRadius: BorderRadius.circular(12),
-                          clipBehavior: Clip.antiAlias,
-                          child: InkWell(
-                            onTap: () => widget.onOpen(place.block),
-                            child: Padding(
-                              padding: const EdgeInsets.all(8),
-                              child: Text(
-                                '${place.block.title}\n${place.block.immovable ? 'Fixed / pinned' : 'Flexible'}',
-                                maxLines: place.minutes < 65 ? 1 : 5,
-                                overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(
-                                      color: EditorialPalette.of(context)
-                                          .brandText,
-                                    ),
+                  ),
+                  Expanded(
+                    child: Semantics(
+                      button: true,
+                      label:
+                          'Create event ${calendarCreateTime(widget.clock, day, day.start.add(Duration(minutes: minute)))}',
+                      child: InkWell(
+                        onTap: () => widget.onCreate(
+                          calendarCreateTime(
+                            widget.clock,
+                            day,
+                            day.start.add(Duration(minutes: minute)),
+                          ),
+                        ),
+                        child: Container(
+                          height: 64,
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outlineVariant,
                               ),
                             ),
                           ),
                         ),
                       ),
                     ),
+                  ),
                 ],
               ),
-            );
-          },
+            ),
+        if (!now.isBefore(day.start) && now.isBefore(day.end))
+          Positioned(
+            top: now.difference(day.start).inSeconds / 3600 * 64,
+            left: 54,
+            right: 0,
+            child: IgnorePointer(
+              child: Container(
+                height: 2,
+                color: EditorialPalette.of(context).brandText,
+              ),
+            ),
+          ),
+        for (final place in placements)
+          if (place.startMinute / 60 * 64 +
+                      (place.minutes / 60 * 64).clamp(48.0, double.infinity) >
+                  visibleFrom &&
+              place.startMinute / 60 * 64 < visibleUntil)
+            Positioned(
+              top: place.startMinute / 60 * 64,
+              left: 64 + place.column * width / place.columns + 2,
+              width: place.block.id == expandedId
+                  ? 5
+                  : (width / place.columns - 4).clamp(1.0, double.infinity),
+              height: (place.minutes / 60 * 64 - 2).clamp(
+                48.0,
+                double.infinity,
+              ),
+              child: place.block.id == expandedId
+                  ? ExcludeSemantics(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: EventColors.fromId(place.block.colorId)
+                              .foreground(Theme.of(context).brightness),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    )
+                  : _collapsedEvent(
+                      place,
+                      date,
+                      place.startMinute / 60 * 64 < visibleFrom,
+                    ),
+            ),
+      ],
+    );
+  }
+
+  Widget _collapsedEvent(
+    CalendarPlacement place,
+    DateTime day,
+    bool continuation,
+  ) {
+    final colors = EventColors.fromId(place.block.colorId),
+        brightness = Theme.of(context).brightness;
+    return Semantics(
+      button: true,
+      expanded: false,
+      onTap: () => _toggleEvent(place.block, day),
+      label:
+          '${continuation ? 'Continuation of ' : ''}${place.block.title}, ${widget.clock.stamp(place.block.start)} to ${widget.clock.stamp(place.block.end)}, ${colors.name}, ${place.block.immovable ? 'fixed or pinned' : 'flexible'}. Expand event tasks',
+      excludeSemantics: true,
+      child: Material(
+        color: colors.surface(brightness),
+        borderRadius: BorderRadius.circular(16),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _toggleEvent(place.block, day),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Text(
+              '${place.block.title}\n${place.block.immovable ? 'Fixed / pinned' : 'Flexible'}',
+              maxLines: place.minutes < 65 ? 1 : 5,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelLarge
+                  ?.copyWith(color: colors.foreground(brightness)),
+            ),
+          ),
         ),
       ),
     );

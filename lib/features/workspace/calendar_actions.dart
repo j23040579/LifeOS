@@ -6,6 +6,8 @@ extension _CalendarActions on _WorkspaceShellState {
     initialDate: _calendarDate,
     onDateChanged: (date) => _calendarDate = date,
     blocks: store.blocks,
+    tasks: store.tasks,
+    eventBodyBuilder: _inlineEventTasks,
     onCreate: (localStart) => _block(null, localStart),
     onOpen: _openEvent,
   );
@@ -26,21 +28,7 @@ extension _CalendarActions on _WorkspaceShellState {
               padding: EdgeInsets.all(24),
               child: Text('This event was removed.'),
             );
-          final selected = {
-            if (event.taskId != null) event.taskId!,
-            ...event.relatedTaskIds,
-          };
-          final all = store.tasks;
-          final roots = all.where((task) {
-            if (!selected.contains(task.id)) return false;
-            var parent = task.parentId;
-            final visited = {task.id};
-            while (parent != null && visited.add(parent)) {
-              if (selected.contains(parent)) return false;
-              parent = all.where((t) => t.id == parent).firstOrNull?.parentId;
-            }
-            return true;
-          }).toList();
+          final roots = eventTasks(event, store.tasks).roots;
           return SizedBox(
             height: MediaQuery.sizeOf(context).height * .85,
             child: SingleChildScrollView(
@@ -133,6 +121,155 @@ extension _CalendarActions on _WorkspaceShellState {
         },
       ),
     );
+  }
+
+  Widget _inlineEventTasks(PlanBlock event) {
+    final summary = eventTasks(event, store.tasks);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final issue in summary.issues)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Text(issue),
+          ),
+        if (summary.roots.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              'No tasks here yet. Create a task or link existing work in Event details.',
+            ),
+          ),
+        for (final task in summary.roots) _inlineTask(task, event, {}, 0),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            TextButton.icon(
+              onPressed: store.busy ? null : () => _task(null, event.id),
+              icon: const Icon(Icons.add),
+              label: const Text('Create task'),
+            ),
+            TextButton.icon(
+              onPressed: store.busy ? null : () => _chooseEventColor(event),
+              icon: const Icon(Icons.palette_outlined),
+              label: Text('Color: ${EventColors.fromId(event.colorId).name}'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _inlineTask(
+    PlanTask task,
+    PlanBlock event,
+    Set<String> ancestors,
+    int depth,
+  ) {
+    if (ancestors.contains(task.id))
+      return const Text('Task hierarchy cycle needs review.');
+    final next = {...ancestors, task.id};
+    final children = store.tasks.where((t) => t.parentId == task.id).toList();
+    final colors = EventColors.fromId(event.colorId),
+        brightness = Theme.of(context).brightness;
+    final done = task.state == TaskState.completed;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: EdgeInsets.only(left: depth.clamp(0, 2) * 12.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Checkbox(
+                value: done,
+                activeColor: colors.foreground(brightness),
+                checkColor: colors.surface(brightness),
+                side: BorderSide(color: colors.foreground(brightness)),
+                semanticLabel: '${done ? 'Reopen' : 'Complete'} ${task.title}',
+                onChanged: store.busy
+                    ? null
+                    : (_) async {
+                        if (!await store.complete(task))
+                          message(store.error ?? 'Task not saved.');
+                      },
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.title,
+                        style: TextStyle(
+                          color: colors.foreground(brightness),
+                          decoration: done ? TextDecoration.lineThrough : null,
+                        ),
+                      ),
+                      Text(
+                        done
+                            ? 'Completed · ${task.effortWeight} min estimated effort'
+                            : children.isEmpty
+                            ? '${task.minutes} min remaining'
+                            : '${(weightedTaskProgress(task.id, store.tasks) * 100).round()}% estimated subtask effort',
+                        style: TextStyle(
+                          color: colors.foreground(brightness),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              PopupMenuButton<String>(
+                tooltip: 'Task actions: ${task.title}',
+                icon: Icon(
+                  Icons.more_horiz,
+                  color: colors.foreground(brightness),
+                ),
+                onSelected: (action) {
+                  if (action == 'edit')
+                    _task(task);
+                  else
+                    _task(null, event.id, task.id);
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Edit task')),
+                  PopupMenuItem(value: 'subtask', child: Text('Add subtask')),
+                ],
+              ),
+            ],
+          ),
+        ),
+        for (final child in children)
+          _inlineTask(child, event, next, depth + 1),
+      ],
+    );
+  }
+
+  Future<void> _chooseEventColor(PlanBlock event) async {
+    final fields = await entryForm(context, 'Choose event color', [
+      EntryField(
+        'color',
+        'Color',
+        value: event.colorId,
+        builder: (context, value, onChanged) =>
+            EventColorPicker(value: value, onChanged: onChanged),
+      ),
+    ]);
+    if (fields == null) return;
+    final latest = store.snapshot.records[event.id];
+    if (latest == null) {
+      message('This event was removed.');
+      return;
+    }
+    await store.put({
+      ...latest,
+      'colorId': fields['color'],
+    }, 'Change event color');
   }
 
   Widget _eventTask(PlanTask task, String eventId, Set<String> ancestors) {

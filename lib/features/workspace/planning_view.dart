@@ -389,6 +389,13 @@ extension _PlanningView on _WorkspaceShellState {
           choices: {for (final task in store.tasks) task.id: task.title},
         ),
         EntryField(
+          'color',
+          'Event color',
+          value: block?.colorId ?? 'rose',
+          builder: (context, value, onChanged) =>
+              EventColorPicker(value: value, onChanged: onChanged),
+        ),
+        EntryField(
           'fixed',
           'Commitment type',
           value: block?.fixed == false ? 'flexible' : 'fixed',
@@ -421,6 +428,7 @@ extension _PlanningView on _WorkspaceShellState {
         taskId: fields['task']!.isEmpty ? null : fields['task'],
         source: block?.source ?? 'LifeOS',
         relatedTaskIds: List<String>.from(jsonDecode(fields['related']!)),
+        colorId: fields['color']!,
       ).toJson(),
       'kind': 'block',
     }, 'Manually edit time block');
@@ -500,10 +508,11 @@ extension _PlanningView on _WorkspaceShellState {
       );
       return;
     }
-    final proposal = Scheduler().propose(
+    final options = scheduleOptions(
       revision: store.snapshot.revision,
       tasks: store.tasks,
       existing: store.blocks,
+      clock: clock,
       windows: reserveFreeTime(
         windows,
         store.blocks,
@@ -511,47 +520,93 @@ extension _PlanningView on _WorkspaceShellState {
       ),
     );
     if (!mounted) return;
+    var selected = 0;
     final before = store.blocks
         .where((b) => !b.immovable)
         .map((b) => '${b.title}: ${clock.stamp(b.start)}')
         .join('\n');
-    final after = proposal.blocks
-        .where((b) => !b.immovable)
-        .map(
-          (b) => '${b.title}: ${clock.stamp(b.start)} → ${clock.stamp(b.end)}',
-        )
-        .join('\n');
-    final issues = [
-      ...proposal.conflicts,
-      for (final id in proposal.unscheduled)
-        'Cannot fit: ${store.snapshot.records[id]?['title'] ?? id}',
-    ];
     final accepted = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Review your proposed schedule'),
-        content: SizedBox(
-          width: 600,
-          child: SingleChildScrollView(
-            child: Text(
-              'BEFORE\n${before.isEmpty ? 'No flexible blocks' : before}\n\nAFTER\n${after.isEmpty ? 'No new flexible blocks' : after}\n\n${issues.join('\n')}\n\nDeadline-first planning leaves ${fields['reserve']}% of available free time unallocated. Fixed/pinned blocks and true deadlines are preserved. Nothing has been applied.',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final option = options[selected], proposal = option.proposal;
+          final after = proposal.blocks
+              .where((b) => !b.immovable)
+              .map(
+                (b) =>
+                    '${b.title}: ${clock.stamp(b.start)} → ${clock.stamp(b.end)}',
+              )
+              .join('\n');
+          final issues = [
+            ...proposal.conflicts,
+            for (final id in proposal.unscheduled)
+              'Cannot fit: ${store.snapshot.records[id]?['title'] ?? id}',
+          ];
+          return AlertDialog(
+            title: const Text('Review your proposed schedule'),
+            content: SizedBox(
+              width: 600,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Choose the plan that suits you. Nothing is saved until you approve.',
+                    ),
+                    const SizedBox(height: 16),
+                    for (var i = 0; i < options.length; i++)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: ChoiceChip(
+                          label: Text(
+                            '${i + 1}. ${options[i].name} · ${options[i].proposal.feasible ? 'fits' : 'needs changes'}',
+                          ),
+                          selected: selected == i,
+                          onSelected: (_) => setDialogState(() => selected = i),
+                        ),
+                      ),
+                    Text(
+                      '${option.explanation}\nNew work on the busiest date: ${option.peakFlexibleMinutes} min · ${option.changedFlexibleBlocks} changed, added or removed blocks.',
+                    ),
+                    const SizedBox(height: 16),
+                    SelectableText(
+                      'BEFORE\n${before.isEmpty ? 'No flexible blocks' : before}\n\nAFTER\n${after.isEmpty ? 'No new flexible blocks' : after}\n\n${issues.join('\n')}\n\nKeep at least ${fields['reserve']}% of available free time unallocated. Your fixed/pinned events and true deadlines stay the same.',
+                    ),
+                    const SizedBox(height: 8),
+                    ExpansionTile(
+                      expansionAnimationStyle: AnimationStyle(
+                        duration: motionDuration(context),
+                      ),
+                      title: const Text('How these plans are compared'),
+                      children: const [
+                        Padding(
+                          padding: EdgeInsets.only(bottom: 16),
+                          child: Text(
+                            'Plans with fewer conflicts and unplanned tasks appear first. Ties favor less new work on the busiest date, then fewer changed, added or removed blocks. These rule-based choices do not search every possible schedule.',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: proposal.feasible
-                ? () => Navigator.pop(context, true)
-                : null,
-            child: const Text('Approve changes'),
-          ),
-        ],
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: proposal.feasible
+                    ? () => Navigator.pop(context, true)
+                    : null,
+                child: const Text('Approve changes'),
+              ),
+            ],
+          );
+        },
       ),
     );
-    if (accepted == true) await store.apply(proposal);
+    if (accepted == true) await store.apply(options[selected].proposal);
   }
 }

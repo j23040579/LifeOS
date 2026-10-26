@@ -12,6 +12,8 @@ import 'package:lifeos/data/workspace_database.dart';
 import 'package:lifeos/domain/ai_gateway.dart';
 import 'package:lifeos/domain/planning.dart';
 import 'package:lifeos/features/workspace/workspace_shell.dart';
+import 'package:lifeos/features/workspace/calendar_timeline.dart';
+import 'package:lifeos/features/workspace/calendar_event_card.dart';
 
 import '../../support/credentials.dart';
 
@@ -52,7 +54,7 @@ void main() {
   }
 
   testWidgets(
-    'calendar event opens nested tasks and saves a new subtask atomically',
+    'first tap expands tasks inside the calendar and saves a new subtask atomically',
     (tester) async {
       final now = DateTime.now().toUtc();
       final parent = PlanTask(
@@ -88,10 +90,21 @@ void main() {
       await tester.ensureVisible(tile);
       await tester.tap(tile);
       await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(CalendarTimeline),
+          matching: find.text('Read chapter'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.byType(CalendarEventCard), findsOneWidget);
       expect(find.text('Read chapter'), findsOneWidget);
       expect(find.text('Recall definitions'), findsOneWidget);
-      await tester.ensureVisible(find.text('Add subtask').first);
-      await tester.tap(find.text('Add subtask').first);
+      await tester.ensureVisible(find.byTooltip('Task actions: Read chapter'));
+      await tester.tap(find.byTooltip('Task actions: Read chapter'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add subtask'));
       await tester.pumpAndSettle();
       await tester.enterText(
         find.byType(TextFormField).first,

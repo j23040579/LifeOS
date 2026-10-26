@@ -3,16 +3,11 @@ part of 'workspace_shell.dart';
 extension _ProgressView on _WorkspaceShellState {
   Widget _progress() {
     final workouts = store.of('workout');
-    final sessions = workouts.map((r) => r['session']).toSet().length;
+    final sessions = workouts
+        .map((r) => jsonEncode([r['source'] ?? 'Imported', r['session']]))
+        .toSet()
+        .length;
     final working = workouts.where((r) => r['setType'] != 'warmup').toList();
-    final nutrition = <String, num>{};
-    for (final row in store.of('nutrition')) {
-      nutrition.update(
-        row['date'],
-        (value) => value + (row['calories'] as num),
-        ifAbsent: () => row['calories'] as num,
-      );
-    }
     final budget =
         store.snapshot.records['settings']?['weeklyMinor'] as int? ?? 0;
     final now = clock.now();
@@ -81,7 +76,45 @@ extension _ProgressView on _WorkspaceShellState {
             '${working.length} non-warmup set rows · ${workouts.length} total imported rows\nSources: ${workouts.map((r) => r['source'] ?? 'Imported').toSet().join(', ')}. Missing RPE is not inferred.',
           ),
         ),
-        for (final summary in trainingSummary(workouts))
+        OutlinedButton.icon(
+          onPressed: workouts.isEmpty || store.busy
+              ? null
+              : () => _exerciseAlias(),
+          icon: const Icon(Icons.compare_arrows),
+          label: const Text('Exercise name mappings'),
+        ),
+        for (final alias in store.of('exercise_alias'))
+          panel(
+            line(
+              '${alias['exercise']} → ${alias['canonical']}',
+              '${alias['provider']} · Analytics mapping; original records preserved',
+              action: Wrap(
+                spacing: 8,
+                children: [
+                  TextButton(
+                    onPressed: store.busy ? null : () => _exerciseAlias(alias),
+                    child: const Text('Edit mapping'),
+                  ),
+                  TextButton(
+                    onPressed: store.busy
+                        ? null
+                        : () async {
+                            if (await confirm(
+                              'Remove this exercise mapping?',
+                              '${alias['exercise']} → ${alias['canonical']}\nThe original set rows and names will remain.',
+                            ))
+                              await store.remove(alias['id']);
+                          },
+                    child: const Text('Remove mapping'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        const SizedBox(height: 12),
+        for (final summary in trainingSummary(
+          store.snapshot.records.values.toList(),
+        ))
           panel(
             line(
               '${summary.exercise} · ${summary.provider}',
@@ -91,32 +124,7 @@ extension _ProgressView on _WorkspaceShellState {
                   '${summary.interpretation}\nSource: imported rows; not a prescribed routine. Missing RPE is not inferred.',
             ),
           ),
-        Text('Nutrition', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 16),
-        if (nutrition.isNotEmpty)
-          TrendChart(
-            title: 'Recorded calories',
-            unit: 'kcal',
-            source: 'MyFitnessPal · Partial days',
-            points: [
-              for (final e in nutrition.entries)
-                TrendPoint(DateTime.parse(e.key), e.value.toDouble()),
-            ],
-          ),
-        if (nutrition.isEmpty)
-          panel(
-            const Text(
-              'No nutrition records. Missing days are not zero-intake days.',
-            ),
-          ),
-        for (final day in nutritionSummary(store.of('nutrition')))
-          panel(
-            line(
-              '${day.date} · ${day.calories} kcal',
-              '${day.partial ? 'Partial day' : 'User-confirmed complete'} · Carbs ${day.carbs ?? 'missing'} g · Fat ${day.fat ?? 'missing'} g · Protein ${day.protein ?? 'missing'} g\n'
-                  'Item records only. Missing nutrients stay missing; meal TOTALS are excluded.',
-            ),
-          ),
+        _nutritionDashboard(),
         Text('Measurements', style: Theme.of(context).textTheme.headlineMedium),
         for (final metric
             in store.of('measurement').map((r) => r['title']).toSet())

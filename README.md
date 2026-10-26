@@ -8,12 +8,16 @@ deployed backend, real credentials, or paid service is required for basic use.
 
 The [Home/calendar guide](docs/calendar-home-redesign.md) explains timeline event
 creation, linked subtasks, today's to-dos, current-state scoring, Gemini fallback,
-and task-linked focus/reflections.
+and task-linked focus/reflections. The [progress review guide](docs/progress-reviews.md)
+covers food-day completeness, personal targets, and exercise-name mappings.
 
 - **Today / Plan:** goals, projects, nested tasks, effort-weighted progress,
   deadlines, prerequisites, fixed/pinned blocks, habits and explicit availability.
-  A deterministic scheduler preserves commitments, reserves free time, reports
-  overload, and shows a proposal before saving. Undo and revision checks protect
+  Tap an event to expand its checklist inside the calendar, create nested work,
+  or choose from nine saved event colors. Buttons remain fully rounded in all
+  states. The scheduler compares deadline-first, importance-first, and spread-work
+  alternatives, preserves commitments, reserves free time, reports overload, and
+  shows a proposal before saving. Undo and revision checks protect
   local changes. Delaying work never changes a deadline automatically.
 - **Learn:** courses, local notes, PDF/EPUB text extraction with page/section
   provenance, prerequisite concept links, self-assessed recall and review dates,
@@ -23,7 +27,9 @@ and task-linked focus/reflections.
 - **Progress:** Hevy CSV, MyFitnessPal TXT, manual food and body/activity/sleep
   records, macro summaries, measurement charts with accessible values, recorded
   exercise progression, integer-sen budgets, transactions, and outing estimates.
-  Missing nutrients/RPE stay missing; partial nutrition days stay labelled.
+  Personal nutrition targets, week/month food summaries, explicit day-completeness
+  review, and editable provider-specific exercise mappings are included. Missing
+  nutrients/RPE stay missing; food edits invalidate a previous complete-day review.
 - **Coach:** offline commands and scheduling, an explicitly labelled offline chat
   demo, and optional online Gemini through a personal gateway. AI can propose a
   task change; only a separate user approval saves it. No external write tools.

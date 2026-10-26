@@ -37,8 +37,9 @@ class Workspace extends ChangeNotifier {
 
   Future<bool> change(
     String description,
-    void Function(Map<String, Map<String, dynamic>>) edit,
-  ) async {
+    void Function(Map<String, Map<String, dynamic>>) edit, {
+    bool invalidateNutritionConfirmation = true,
+  }) async {
     if (busy) return false;
     busy = true;
     error = null;
@@ -49,6 +50,8 @@ class Workspace extends ChangeNotifier {
           e.key: Map<String, dynamic>.from(e.value),
       };
       edit(records);
+      if (invalidateNutritionConfirmation)
+        _invalidateChangedNutrition(snapshot.records, records);
       for (final record in records.values) {
         _validateRecord(record);
       }
@@ -96,6 +99,30 @@ class Workspace extends ChangeNotifier {
       (_, value) =>
           value['sourceNoteId'] == id ? {...value, 'sourceStale': true} : value,
     );
+  });
+
+  Future<bool> reviewNutritionDay({
+    required String date,
+    required bool complete,
+    required int expectedRevision,
+  }) => change('Review nutrition day completeness', (records) {
+    if (snapshot.revision != expectedRevision)
+      throw const FormatException(
+        'Records changed; review the food day again.',
+      );
+    if (!records.values.any(
+      (r) => r['kind'] == 'nutrition' && r['date'] == date,
+    ))
+      throw const FormatException('No food entries remain for this date.');
+    final id = 'nutrition-day-$date';
+    records[id] = {
+      'id': id,
+      'kind': 'nutrition_day',
+      'date': date,
+      'complete': complete,
+      'source': 'User confirmation',
+      'at': DateTime.now().toUtc().toIso8601String(),
+    };
   });
   Future<bool> deleteTask(String id) => change('Delete task', (records) {
     records.remove(id);
@@ -316,7 +343,7 @@ class Workspace extends ChangeNotifier {
     return change('Restore backup', (current) {
       current.clear();
       current.addAll(records);
-    });
+    }, invalidateNutritionConfirmation: false);
   }
 }
 
@@ -332,6 +359,8 @@ void _validateRecord(Map<String, dynamic> record) {
     'recall',
     'workout',
     'nutrition',
+    'nutrition_day',
+    'exercise_alias',
     'expense',
     'measurement',
     'focus',
@@ -361,6 +390,17 @@ void _validateRecord(Map<String, dynamic> record) {
       if (!finite(record['calories']) || record['partial'] is! bool)
         throw const FormatException('Invalid nutrition record');
       ZoneClock().parse('${record['date']} 12:00');
+    case 'nutrition_day':
+      ZoneClock().parse('${record['date']} 12:00');
+      if (record['complete'] is! bool)
+        throw const FormatException('Invalid nutrition confirmation');
+    case 'exercise_alias':
+      for (final key in ['provider', 'exercise', 'canonical']) {
+        if (record[key] is! String ||
+            (record[key] as String).trim().isEmpty ||
+            (record[key] as String).length > 300)
+          throw const FormatException('Invalid exercise mapping');
+      }
     case 'measurement':
       if (!finite(record['value']) || record['unit'] is! String)
         throw const FormatException('Invalid measurement');
@@ -381,6 +421,14 @@ void _validateRecord(Map<String, dynamic> record) {
       ZoneClock(record['zone']);
       if (record['weeklyMinor'] is! int || record['weeklyMinor'] < 0)
         throw const FormatException('Invalid budget');
+      if (record['nutritionTargets'] != null) {
+        if (record['nutritionTargets'] is! Map)
+          throw const FormatException('Invalid nutrition targets');
+        for (final value in (record['nutritionTargets'] as Map).values) {
+          if (value is! num || !value.isFinite || value <= 0)
+            throw const FormatException('Invalid nutrition target');
+        }
+      }
     case 'reflection':
       ZoneClock().parse('${record['date']} 12:00');
       if (record['body'] is! String ||
@@ -394,4 +442,38 @@ void _validateRecord(Map<String, dynamic> record) {
     default:
       break;
   }
+}
+
+void _invalidateChangedNutrition(
+  Map<String, Map<String, dynamic>> before,
+  Map<String, Map<String, dynamic>> after,
+) {
+  final old = {
+    for (final row in before.values.where((r) => r['kind'] == 'nutrition'))
+      row['id']: row,
+  };
+  final current = {
+    for (final row in after.values.where((r) => r['kind'] == 'nutrition'))
+      row['id']: row,
+  };
+  final changedDates = <String>{};
+  for (final id in {...old.keys, ...current.keys}) {
+    if (jsonEncode(old[id]) != jsonEncode(current[id])) {
+      if (old[id]?['date'] is String) changedDates.add(old[id]!['date']);
+      if (current[id]?['date'] is String)
+        changedDates.add(current[id]!['date']);
+    }
+  }
+  after.updateAll(
+    (id, row) =>
+        row['kind'] == 'nutrition_day' &&
+            row['complete'] == true &&
+            changedDates.contains(row['date'])
+        ? {
+            ...row,
+            'complete': false,
+            'reason': 'Food records changed; review this date again.',
+          }
+        : row,
+  );
 }

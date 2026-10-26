@@ -6,9 +6,9 @@ capability or a production release.
 
 | Executed check | Result |
 |---|---|
-| Dart formatting, lib/test/integration_test/tool | 62 files checked; no formatting changes required |
+| Dart formatting, lib/test/integration_test/tool | 75 files checked; no formatting changes required |
 | `flutter analyze` | No issues |
-| `flutter test --concurrency=2` | **90 passed**, no skipped/disabled tests |
+| `flutter test --concurrency=2` | **124 passed**, no skipped/disabled tests; final schedule-review copy/layout then passed all 8 affected tests |
 | `node --test server/gemini-worker.test.mjs` | **6 passed** using synthetic provider responses |
 | `dart run tool/bootstrap.dart`, repeated | Passed; existing runners preserved, SQLite web assets verified; documented Android INTERNET/automatic-backup settings applied |
 | `flutter build web --no-web-resources-cdn` | Passed; browser engine/fonts/PDF/SQLite assets served locally |
@@ -88,7 +88,7 @@ synthetic fixture twice; try the source recall and offline chat; add measurement
 and expenses; export/restore a backup; change appearance and restart; test enlarged
 text and narrow windows. Use a separate demo database for destructive data tests.
 
-## Home/calendar redesign verification
+## Previous Home/calendar baseline verification
 
 - `flutter analyze`: no issues; full suite: **90 Flutter tests passed**. An additional
   targeted run after the final calendar card/now-line visual adjustment passed all
@@ -113,3 +113,63 @@ text and narrow windows. Use a separate demo database for destructive data tests
 - Source code for every changed file is provided as a complete-file text/ZIP bundle,
   with a SHA-256 manifest; generated platform runners, local lockfiles, credentials
   and private uploaded exports are excluded.
+
+## Inline event and offline review update
+
+- All **124 Flutter tests** passed, including the new screen-reader semantic-action
+  test for inline expand/collapse and month-date activation. After simplifying the
+  final schedule-review copy/layout, all **8 affected scheduling/responsive tests**
+  passed. Static analysis and formatting are clean. Six gateway mock tests passed;
+  they make no live Gemini requests.
+- The final source built successfully for release web and Android ARM64 debug.
+  The existing nonfatal PDF-package Cupertino font warning remains in web output.
+  No new dependency or platform configuration was introduced.
+- New calendar tests cover inline checkbox editing in Day/Week/Agenda, saved colors,
+  reloading/undo, unchanged start/end times and provenance, legacy color defaults,
+  parent/child deduplication, cyclic/missing task links, effort progress, and 360px
+  layouts with 200% text in both themes. Button shapes are checked across pressed,
+  hovered, focused and disabled states. All nine event text/surface pairs exceed
+  4.5:1; computed ratios range from 6.30:1 to 10.07:1.
+- Nutrition tests cover explicit complete/partial overrides, stale-review rejection,
+  invalidation on added/edited/deleted/moved food entries, atomic undo, restore,
+  target validation/settings preservation, unknown nutrients and missing-date
+  denominators. Exercise tests verify provider separation, alias edit/remove and
+  preservation of original set rows.
+- Planner tests compare policy feasibility, deadline protection, fixed commitments,
+  spread-work peak metrics, invalid availability, empty horizons, DST day boundaries,
+  and choosing/cancelling/approving an alternative with undo.
+- Final release-web Chromium interaction passed: inline expansion without a sheet,
+  deduplicated nested tasks, checking work, changing/saving event color, unchanged
+  event instants, JSON export verification, and mobile/agenda rendering. A second
+  independent workspace passed target entry/reload, week/month review, complete-day
+  confirmation, exercise mapping add/edit/cancel/remove with raw rows preserved,
+  schedule comparison/cancel/approval, backup verification and browser reload.
+  Both flows reported **zero JavaScript page errors**. Review controls remain
+  disabled during a pending save; stale confirmation still rejects changed data.
+  Screenshot evidence is in docs/design/screenshots; all fixtures are synthetic.
+- Native Windows execution, Android device/emulator interaction, a formal native
+  screen-reader audit, live Gemini and external account integrations remain unrun.
+  See status.md for the remaining full-spec backlog; this update does not mark the
+  whole product complete.
+
+Laptop spot checks for this update:
+
+```powershell
+git pull --ff-only
+flutter pub get
+dart run tool/bootstrap.dart
+flutter analyze
+flutter test
+flutter run -d windows
+flutter run -d chrome --web-port=7357
+flutter devices
+flutter run -d <device_id>
+```
+
+Create an event with a color, tap it once, create/check a task, add a subtask from
+its menu, collapse/reopen, change color, restart, and verify the saved checklist.
+Open Event details only through its explicit button. Compare three schedule
+policies before approving one. Enter nutrition targets, review a food day, then
+change a food entry and verify its completeness review resets. Add/edit/remove an
+exercise alias and verify the original sets are unchanged. Export a backup before
+testing destructive actions on personal data.

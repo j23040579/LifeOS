@@ -68,9 +68,7 @@ abstract final class AppTheme {
       bodySmall: _type(12, 18, FontWeight.w400),
     ).apply(bodyColor: p.text, displayColor: p.text);
 
-    final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(DesignTokens.radiusControl),
-    );
+    const shape = StadiumBorder();
 
     OutlineInputBorder inputBorder(Color color, [double width = 1]) {
       return OutlineInputBorder(
@@ -131,6 +129,7 @@ abstract final class AppTheme {
               disabledForegroundColor: p.disabled,
               minimumSize: const Size(48, 48),
               textStyle: text.labelLarge,
+              shape: shape,
             ).copyWith(
               side: WidgetStateProperty.resolveWith(
                 (states) => BorderSide(
@@ -162,8 +161,31 @@ abstract final class AppTheme {
               ),
             ),
       ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          shape: shape,
+          minimumSize: const Size(48, 48),
+          foregroundColor: p.text,
+          backgroundColor: p.raised,
+        ),
+      ),
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(shape: const WidgetStatePropertyAll(shape)),
+      ),
+      chipTheme: ChipThemeData(
+        shape: shape,
+        labelStyle: TextStyle(color: p.text),
+        checkmarkColor: p.text,
+        side: BorderSide(color: p.outline),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        shape: shape,
+        backgroundColor: DesignTokens.brand,
+        foregroundColor: DesignTokens.onBrand,
+      ),
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(
+          shape: const WidgetStatePropertyAll(CircleBorder()),
           minimumSize: const WidgetStatePropertyAll(Size(48, 48)),
           side: WidgetStateProperty.resolveWith(
             (states) => BorderSide(

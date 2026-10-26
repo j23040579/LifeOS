@@ -66,10 +66,12 @@ class PlanBlock {
     this.pinned = false,
     this.source = 'LifeOS',
     this.relatedTaskIds = const [],
+    this.colorId = 'rose',
   });
   final String id, title, source;
   final String? taskId;
   final List<String> relatedTaskIds;
+  final String colorId;
   final DateTime start, end;
   final bool fixed, pinned;
   bool get immovable => fixed || pinned || source != 'LifeOS';
@@ -80,6 +82,7 @@ class PlanBlock {
     'end': end.toUtc().toIso8601String(),
     'taskId': taskId,
     'relatedTaskIds': relatedTaskIds,
+    'colorId': colorId,
     'fixed': fixed,
     'pinned': pinned,
     'source': source,
@@ -91,6 +94,7 @@ class PlanBlock {
     end: DateTime.parse(j['end']),
     taskId: j['taskId'],
     relatedTaskIds: List<String>.from(j['relatedTaskIds'] ?? []),
+    colorId: j['colorId'] ?? 'rose',
     fixed: j['fixed'] ?? false,
     pinned: j['pinned'] ?? false,
     source: j['source'] ?? 'LifeOS',
@@ -125,6 +129,7 @@ class Scheduler {
     required List<PlanTask> tasks,
     required List<PlanBlock> existing,
     required List<TimeWindow> windows,
+    bool priorityFirst = false,
   }) {
     final hierarchy = resolveHierarchy(tasks);
     tasks = hierarchy.leaves;
@@ -160,6 +165,8 @@ class Scheduler {
             )
             .toList()
           ..sort((a, b) {
+            if (priorityFirst && a.priority != b.priority)
+              return b.priority.compareTo(a.priority);
             final due = a.deadline.compareTo(b.deadline);
             return due != 0
                 ? due
@@ -259,6 +266,21 @@ class Scheduler {
           pieces.add(
             PlanBlock(
               id: 'proposal-${task.id}-$pieceIndex',
+              colorId:
+                  (existing
+                              .where(
+                                (b) =>
+                                    b.id == 'proposal-${task.id}-$pieceIndex',
+                              )
+                              .firstOrNull ??
+                          existing
+                              .where(
+                                (b) =>
+                                    b.source == 'LifeOS' && b.taskId == task.id,
+                              )
+                              .firstOrNull)
+                      ?.colorId ??
+                  'rose',
               title: task.title,
               taskId: task.id,
               start: gap.start,

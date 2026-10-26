@@ -19,9 +19,13 @@ import '../../domain/day_assessment.dart';
 import '../../core/design/motion.dart';
 import 'home_overview.dart';
 import 'calendar_timeline.dart';
+import 'event_color_picker.dart';
+import '../../core/design/event_colors.dart';
+import '../../domain/event_tasks.dart';
 import '../../domain/sample_workspace.dart';
 import '../../domain/imports.dart';
 import '../../domain/planning.dart';
+import '../../domain/schedule_options.dart';
 import '../../application/workspace.dart';
 import '../today/today_screen.dart';
 import 'entry_form.dart';
@@ -38,6 +42,7 @@ part 'progress_view.dart';
 part 'coach_view.dart';
 
 part 'data_actions.dart';
+part 'progress_actions.dart';
 
 class WorkspaceShell extends StatefulWidget {
   const WorkspaceShell({
@@ -120,6 +125,8 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
   DateTime? _calendarDate;
   int _notePage = 0;
   String _sourceCourse = '';
+  bool _nutritionMonth = false;
+  int _nutritionPeriodOffset = 0;
   late AiGateway? _gateway = widget.initialGateway;
   late String? _gatewayLabel = widget.initialGateway == null
       ? null
@@ -144,7 +151,7 @@ class _WorkspaceShellState extends State<WorkspaceShell> {
       final minute = DateTime.now().millisecondsSinceEpoch ~/ 60000;
       if (_lastSnapshotMinute != minute) {
         _lastSnapshotMinute = minute;
-        if (mounted && page == 0) refresh(() {});
+        if (mounted && page <= 1) refresh(() {});
       }
     });
   }

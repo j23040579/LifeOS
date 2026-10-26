@@ -6,10 +6,10 @@ capability or a production release.
 
 | Executed check | Result |
 |---|---|
-| Dart formatting, lib/test/integration_test/tool | 75 files checked; no formatting changes required |
+| Dart formatting, lib/test/integration_test/tool | 78 files checked; no formatting changes required |
 | `flutter analyze` | No issues |
-| `flutter test --concurrency=2` | **124 passed**, no skipped/disabled tests; final schedule-review copy/layout then passed all 8 affected tests |
-| `node --test server/gemini-worker.test.mjs` | **6 passed** using synthetic provider responses |
+| `flutter test --concurrency=2` | **129 passed**, no skipped/disabled tests |
+| `node --test server/gemini-worker.test.mjs` | **11 passed** using synthetic provider responses |
 | `dart run tool/bootstrap.dart`, repeated | Passed; existing runners preserved, SQLite web assets verified; documented Android INTERNET/automatic-backup settings applied |
 | `flutter build web --no-web-resources-cdn` | Passed; browser engine/fonts/PDF/SQLite assets served locally |
 | `flutter build apk --debug --target-platform android-arm64` | Passed, then passed incremental rebuild after final planning fixes |
@@ -173,3 +173,29 @@ policies before approving one. Enter nutrition targets, review a food day, then
 change a food entry and verify its completeness review resets. Add/edit/remove an
 exercise alias and verify the original sets are unchanged. Export a backup before
 testing destructive actions on personal data.
+
+## Gemini generation diagnostics follow-up
+
+The user reported configured readiness followed by HTTP 502 during generation.
+The original gateway masked most upstream failures and Flutter discarded its error
+body, so the precise live cause cannot be inferred from that screenshot.
+
+- Full Flutter suite **129 passed**; Worker protocol tests **11 passed**. Analysis
+  is clean, 78 Dart files pass formatting, and web/Android ARM64 debug builds pass.
+- Tests cover safe classification of key/access/model/request/quota failures,
+  blocked/empty/truncated/unreadable results, timeouts/network exceptions, legacy
+  errors, and final-answer part filtering. Raw provider errors containing synthetic
+  key/prompt strings are not reflected. Mocked calls have no retries/model fallback.
+- Flutter tests verify Coach gateway-boundary propagation and Home's specific
+  provider diagnostic while retaining the local score and privacy of source titles.
+- The direct CLI probe sends one fixed greeting with the JSON generation settings.
+  Mock responses test success and failures; running with key/model/confirmation
+  absent exited 1 before contacting Google. No real key or live generation was used.
+- Native Windows/device interaction and the user's actual Cloudflare deployment
+  remain unverified. Redeploying the Worker and the user's direct probe output are
+  still needed to diagnose that account's generation failure. No new dependency,
+  account changes, billing changes or automatic deployment occurred.
+
+Bash instructions and diagnostic-code actions are in server/README.md under
+"Diagnose configured-but-failing generation". Pulling app source does not update
+an already deployed Worker.

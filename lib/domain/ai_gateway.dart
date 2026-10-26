@@ -4,6 +4,8 @@ import 'package:http/http.dart' as http;
 
 import 'clock.dart';
 import 'day_assessment.dart';
+import 'ai_failure.dart';
+export 'ai_failure.dart' show AiFailure;
 
 class AiAnswer {
   const AiAnswer(
@@ -65,7 +67,7 @@ class AiGateway {
         .get(_route('health'), headers: _headers)
         .timeout(const Duration(seconds: 15));
     if (response.statusCode != 200)
-      throw StateError('Gateway unavailable (${response.statusCode}).');
+      throw AiFailure.fromGateway(response.statusCode, response.body);
     final data = jsonDecode(response.body);
     if (data['ready'] != true)
       throw StateError('The gateway is not configured for a provider yet.');
@@ -100,9 +102,7 @@ class AiGateway {
         )
         .timeout(const Duration(seconds: 90));
     if (response.statusCode != 200)
-      throw StateError(
-        'AI request failed (${response.statusCode}). No local data was changed.',
-      );
+      throw AiFailure.fromGateway(response.statusCode, response.body);
     final data = jsonDecode(response.body);
     if (data['text'] is! String || data['text'].isEmpty)
       throw const FormatException('The provider returned no usable text.');

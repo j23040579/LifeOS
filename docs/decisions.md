@@ -163,3 +163,17 @@
 - Native device acceptance, live Gemini activation and account integrations remain
   unverified. status.md remains the traceable full-spec backlog; passing tests does
   not turn incomplete modules or unavailable connections into completed features.
+
+## Gemini gateway diagnostics — 26 October 2026
+
+- The user's configured gateway returned HTTP 502 during generation while Home
+  correctly retained its labelled local score. Readiness/model discovery do not
+  prove generation; the exact account/provider failure remains unknown.
+- Worker and laptop gateways now classify upstream key/access/model/quota/request,
+  blocked/empty/output-limited response and transport failures without forwarding
+  raw errors that may contain keys, prompts or account metadata.
+- Flutter accepts only allowlisted diagnostic codes/statuses for Coach and Home.
+  Legacy/unknown bodies remain generic. No retry or paid/model fallback was added.
+- Added a one-request, fixed-prompt direct check for Bash troubleshooting. It needs
+  explicit free-project confirmation and an environment-held key, and never prints
+  raw provider output. Cloud tests had no real key or deployed Worker access.

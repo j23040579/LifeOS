@@ -2,8 +2,10 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:async';
 
 import 'package:http/io_client.dart';
+import 'package:lifeos/domain/ai_failure.dart';
 
 Future<void> main() async {
   final environment = Platform.environment;
@@ -199,16 +201,65 @@ Future<void> main() async {
             )
             .timeout(const Duration(seconds: 80));
         if (response.statusCode != 200) {
+          final failure = AiFailure.fromGemini(
+            response.statusCode,
+            response.body,
+          );
           await respond(request, response.statusCode == 429 ? 429 : 502, {
-            'error': 'Gemini request failed. No fallback or local changes were performed.',
+            'error': failure.message,
+            'code': failure.code,
+            'upstreamStatus': failure.upstreamStatus,
           });
           continue;
         }
-        final decoded = jsonDecode(response.body);
-        final parts = decoded['candidates']?[0]?['content']?['parts'] as List?;
+        dynamic decoded;
+        try {
+          decoded = jsonDecode(response.body);
+        } catch (_) {
+          await respond(request, 502, {
+            'code': 'gemini_invalid_response',
+            'error': 'Provider returned unreadable JSON',
+          });
+          continue;
+        }
+        final candidates = decoded is Map ? decoded['candidates'] : null;
+        final candidate =
+            candidates is List &&
+                candidates.isNotEmpty &&
+                candidates.first is Map
+            ? candidates.first as Map
+            : <String, dynamic>{};
+        final feedback = decoded is Map ? decoded['promptFeedback'] : null;
+        if (feedback is Map && feedback['blockReason'] != null ||
+            const [
+              'SAFETY',
+              'RECITATION',
+              'BLOCKLIST',
+              'PROHIBITED_CONTENT',
+            ].contains(candidate['finishReason'])) {
+          await respond(request, 502, {
+            'code': 'gemini_blocked',
+            'error': 'Provider returned a blocked response',
+          });
+          continue;
+        }
+        if (candidate['finishReason'] == 'MAX_TOKENS') {
+          await respond(request, 502, {
+            'code': 'gemini_output_limit',
+            'error': 'Provider reached its output limit',
+          });
+          continue;
+        }
+        final content = candidate['content'];
+        final parts = content is Map && content['parts'] is List
+            ? content['parts'] as List
+            : null;
         text =
             parts
                 ?.whereType<Map>()
+                .where(
+                  (part) => part['thought'] != true && part['text'] is String,
+                )
                 .map((part) => part['text'] ?? '')
                 .join('\n') ??
             '';
@@ -217,6 +268,7 @@ Future<void> main() async {
       }
       if (text.trim().isEmpty) {
         await respond(request, 502, {
+          'code': 'gemini_empty',
           'error': 'Provider returned no usable text.',
         });
         continue;
@@ -237,6 +289,11 @@ Future<void> main() async {
       });
     } catch (e) {
       await respond(request, e is FormatException ? 400 : 502, {
+        'code': e is FormatException
+            ? 'invalid_request'
+            : e is TimeoutException
+            ? 'gateway_timeout'
+            : 'gateway_network',
         'error': e is FormatException
             ? e.message
             : 'Provider request failed. No local records changed.',

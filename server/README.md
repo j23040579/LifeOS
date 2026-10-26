@@ -114,6 +114,60 @@ Avoid shared public gateways: their operator can read your selected prompt/sourc
 Rotate/revoke both secrets when needed. Deleting local chat does not request
 provider-side deletion; follow Google's account controls and applicable terms.
 
+## Diagnose configured-but-failing generation
+
+The `/health` check verifies configured values and gateway authentication. It does
+not send a generation request to Google or validate the key/model's access. Model
+discovery also does not establish generation quota or free eligibility. A Home score
+labelled **Local calculation / Local fallback** is not a Gemini result.
+
+After confirming that the Google project/model is free and unbilled, run this in
+**Bash / Git Bash**, in the checkout root:
+
+```bash
+git pull --ff-only
+flutter pub get
+read -r -s -p "Paste Gemini API key, then press Enter: " GEMINI_API_KEY
+printf '\n'
+export GEMINI_API_KEY
+export LIFEOS_AI_MODEL=gemini-3.8-flash
+export GEMINI_FREE_PROJECT_CONFIRMED=true
+dart run tool/check_gemini.dart
+unset GEMINI_API_KEY
+```
+
+Use your exact discovered, free-eligible model ID if different. This sends one
+fixed greeting with the gateway's JSON settings directly to Google. It sends no
+personal records or gateway token, makes no retry/model switch, and does not print
+raw provider errors, answer content or keys. It consumes generation quota. The
+confirmation flag cannot verify billing. Missing configuration sends no request.
+
+| Result/code | Next step |
+|---|---|
+| `PASS` | Direct Gemini generation works for this test; compare the Cloudflare key/model and deploy the updated Worker. This does not verify the Cloudflare path. |
+| `gemini_key` | Correct/replace the API key and update the Worker secret. |
+| `gemini_permission` | Check key restrictions, API/project access and free eligibility; keep billing disabled. |
+| `gemini_model` | Check the exact model ID and generation access for the project. |
+| `gemini_request` | Google rejected request settings; check text/JSON compatibility. |
+| `gemini_quota` | Check AI Studio free quota and reset time; discovery does not prove usable free quota. |
+| `gemini_output_limit` | Output budget was exhausted; request a shorter answer. Further budget configuration needs the model's documented capabilities. |
+| `gemini_blocked` / `gemini_empty` | Try a short text-only question and check model compatibility. |
+| `gateway_timeout` / `gemini_unavailable` | Timeout/provider failure; no automatic retry occurred. |
+
+The updated Worker returns allowlisted codes and an upstream HTTP status, never raw
+Google errors that could contain keys/prompts/account metadata. Flutter displays the
+safe diagnostics in Coach and Home. Legacy/unknown errors stay generic. The laptop
+gateway uses the same Dart classifications.
+
+**Pulling Git does not update a deployed Worker.** In Cloudflare **Edit code**,
+replace the code with the current entire `server/gemini-worker.mjs`, and **Deploy**.
+Keep the existing secret bindings. Restart the updated app and test one short
+question. No new dependency, billing upgrade, automatic model switch or logging of
+keys/prompts is introduced. Share only the tool's safe result/code and HTTP status.
+
+No actual Gemini account key or deployed Worker access was available for cloud
+validation. Synthetic tests exercise the protocol, not live provider eligibility.
+
 ## Data and action boundary
 
 Only the question and explicitly selected task fields/source excerpt/summary leave

@@ -46,3 +46,53 @@ test('an unrelated browser origin is rejected even with a valid token',async()=>
  const input=request();input.headers.set('Origin','https://unrelated.example');
  assert.equal((await worker.fetch(input,env)).status,403);
 });
+test('provider HTTP failures preserve safe categories without echoing secrets or prompts',async()=>{
+ const original=globalThis.fetch;
+ try {
+  for(const [status,reason,code] of [[400,'API_KEY_INVALID','gemini_key'],[401,null,'gemini_key'],[403,'SERVICE_DISABLED','gemini_permission'],[404,null,'gemini_model'],[400,null,'gemini_request'],[429,null,'gemini_quota'],[503,null,'gemini_unavailable']]) {
+   let calls=0;
+   globalThis.fetch=async()=>{calls++;return Response.json({error:{message:'synthetic-test-key-only PRIVATE PROMPT',details:[{reason,metadata:{key:'synthetic-test-key-only'}}]}},{status});};
+   const result=await worker.fetch(request(),env), data=await result.json();
+   assert.equal(result.status,status===429?429:502);assert.equal(data.code,code);assert.equal(data.upstreamStatus,status);assert.equal(calls,1);
+   assert.equal(JSON.stringify(data).includes('synthetic-test-key-only'),false);assert.equal(JSON.stringify(data).includes('PRIVATE PROMPT'),false);
+  }
+ } finally {globalThis.fetch=original;}
+});
+test('blocked, output-limited, empty and unreadable replies are distinguished',async()=>{
+ const original=globalThis.fetch;
+ try {
+  for(const [body,code] of [[{promptFeedback:{blockReason:'SAFETY'}},'gemini_blocked'],[{candidates:[{finishReason:'MAX_TOKENS',content:{parts:[{text:'partial'}]}}]},'gemini_output_limit'],[{candidates:[]},'gemini_empty']]) {
+   globalThis.fetch=async()=>Response.json(body);
+   const result=await worker.fetch(request(),env);assert.equal(result.status,502);assert.equal((await result.json()).code,code);
+  }
+  globalThis.fetch=async()=>new Response('<html>private upstream error</html>');
+  assert.equal((await (await worker.fetch(request(),env)).json()).code,'gemini_invalid_response');
+  globalThis.fetch=async()=>new Response('<html>private upstream error</html>',{status:503});
+  assert.equal((await (await worker.fetch(request(),env)).json()).upstreamStatus,503);
+ } finally {globalThis.fetch=original;}
+});
+test('only final answer parts are returned',async()=>{
+ const original=globalThis.fetch;
+ globalThis.fetch=async()=>Response.json({candidates:[{finishReason:'STOP',content:{parts:[{thought:true,text:'Excluded model thought'},{text:'{"answer":"A brief answer","proposal":null}'}]}}]});
+ try {const data=await (await worker.fetch(request(),env)).json();assert.equal(data.text,'A brief answer');assert.equal(JSON.stringify(data).includes('Excluded model thought'),false);} finally {globalThis.fetch=original;}
+});
+test('transport timeouts and network exceptions do not expose raw exception text',async()=>{
+ const original=globalThis.fetch;
+ try {
+  for(const name of ['TimeoutError','TypeError']) {
+   globalThis.fetch=async()=>{const e=new Error('synthetic-test-key-only');e.name=name;throw e;};
+   const response=await worker.fetch(request(),env),data=await response.json();
+   assert.equal(data.code,name==='TimeoutError'?'gateway_timeout':'gateway_network');assert.equal(JSON.stringify(data).includes('synthetic-test-key-only'),false);
+  }
+ } finally {globalThis.fetch=original;}
+});
+test('bad JSON and null bodies are request errors and never contact Gemini',async()=>{
+ const original=globalThis.fetch;let calls=0;globalThis.fetch=async()=>{calls++;throw new Error('Unexpected generation');};
+ try {
+  for(const body of ['null','{broken']) {
+   const input=new Request('https://gateway.example/v1/chat',{method:'POST',headers:{Authorization:`Bearer ${token}`},body});
+   const result=await worker.fetch(input,env);assert.equal(result.status,400);assert.equal((await result.json()).code,'invalid_request');
+  }
+  assert.equal(calls,0);
+ } finally {globalThis.fetch=original;}
+});

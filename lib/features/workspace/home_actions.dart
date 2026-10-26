@@ -118,12 +118,12 @@ extension _HomeActions on _WorkspaceShellState {
         _assessmentRevision = revision;
         _assessmentNotice = null;
       });
-    } catch (_) {
+    } catch (error) {
       if (mounted)
         refresh(() {
           _dayAssessment = DayAssessment.local(_evidence());
           _assessmentRevision = store.snapshot.revision;
-          _assessmentNotice = 'Local fallback · Gemini is offline, unavailable, rate-limited, or returned an invalid assessment. No paid fallback was used.';
+          _assessmentNotice = error is AiFailure ? 'Local fallback · $error' : 'Local fallback · Gemini is offline, unavailable, rate-limited, or returned an invalid assessment. No paid fallback was used.';
         });
     } finally {
       if (mounted) refresh(() => _checkInBusy = false);

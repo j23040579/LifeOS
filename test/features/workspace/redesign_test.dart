@@ -158,7 +158,14 @@ void main() {
                     }),
                     200,
                   )
-                : http.Response('{}', 503);
+                : http.Response(
+                    jsonEncode({
+                      'code': 'gemini_model',
+                      'upstreamStatus': 404,
+                      'error': 'Untrusted PRIVATE provider error',
+                    }),
+                    502,
+                  );
           }),
         );
         await mount(tester, gateway: gateway);
@@ -170,6 +177,10 @@ void main() {
         await tester.tap(find.text('Confirm'));
         await tester.pumpAndSettle();
         expect(calls, 1);
+        if (!online) {
+          expect(find.textContaining('Gemini HTTP 404'), findsOneWidget);
+          expect(find.textContaining('Untrusted PRIVATE'), findsNothing);
+        }
         expect(
           find.textContaining(
             online ? 'Gemini assessment' : 'Local fallback · Gemini',

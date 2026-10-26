@@ -96,3 +96,21 @@ test('bad JSON and null bodies are request errors and never contact Gemini',asyn
   assert.equal(calls,0);
  } finally {globalThis.fetch=original;}
 });
+test('HTTP400 key and account errors expose only allowlisted RPC categories',async()=>{
+ const original=globalThis.fetch;
+ try {
+  for(const [message,status,code] of [
+   ['API key not valid. PRIVATE KEY','INVALID_ARGUMENT','gemini_key'],
+   ['API key was reported as leaked. PRIVATE KEY','INVALID_ARGUMENT','gemini_key'],
+   ['PRIVATE REGION / ACCOUNT','FAILED_PRECONDITION','gemini_precondition'],
+   ['PRIVATE REQUEST','INVALID_ARGUMENT','gemini_request'],
+   ['PRIVATE REQUEST','PRIVATE KEY','gemini_request'],
+  ]) {
+   globalThis.fetch=async()=>Response.json({error:{message,status}},{status:400});
+   const data=await (await worker.fetch(request(),env)).json();
+   assert.equal(data.code,code);assert.equal(data.upstreamStatus,400);
+   assert.equal(data.rpcStatus,status==='PRIVATE KEY'?undefined:status);
+   assert.equal(JSON.stringify(data).includes('PRIVATE'),false);
+  }
+ } finally {globalThis.fetch=original;}
+});

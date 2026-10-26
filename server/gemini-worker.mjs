@@ -15,10 +15,12 @@ async function secretMatches(actual, expected) {
 // text, API keys or account identifiers. Return only allowlisted codes/statuses.
 function providerFailure(status, data) {
   const reasons = Array.isArray(data?.error?.details) ? data.error.details.map(item => item?.reason) : [];
-  const code = reasons.includes('API_KEY_INVALID') || reasons.includes('API_KEY_EXPIRED') || status === 401
-    ? 'gemini_key' : status === 403 ? 'gemini_permission' : status === 404 ? 'gemini_model'
+  const rpcStatus = ['INVALID_ARGUMENT','FAILED_PRECONDITION','UNAUTHENTICATED','PERMISSION_DENIED','NOT_FOUND','RESOURCE_EXHAUSTED','UNAVAILABLE','INTERNAL','DEADLINE_EXCEEDED'].includes(data?.error?.status) ? data.error.status : undefined;
+  const invalidKeyMessage = typeof data?.error?.message === 'string' && /api key (?:not valid|is invalid|expired|has expired|was reported as leaked)|invalid api key/i.test(data.error.message);
+  const code = reasons.includes('API_KEY_INVALID') || reasons.includes('API_KEY_EXPIRED') || invalidKeyMessage || status === 401
+    ? 'gemini_key' : status === 400 && rpcStatus === 'FAILED_PRECONDITION' ? 'gemini_precondition' : status === 403 ? 'gemini_permission' : status === 404 ? 'gemini_model'
     : status === 429 ? 'gemini_quota' : status >= 500 ? 'gemini_unavailable' : 'gemini_request';
-  return {code, upstreamStatus:status, error:'Gemini rejected generation. Check the diagnostic code. No provider fallback or local changes occurred.'};
+  return {code, upstreamStatus:status, rpcStatus, error:'Gemini rejected generation. Check the diagnostic code. No provider fallback or local changes occurred.'};
 }
 
 export default {

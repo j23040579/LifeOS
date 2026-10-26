@@ -8,6 +8,52 @@ import 'package:lifeos/domain/ai_gateway.dart';
 import '../../tool/check_gemini.dart' show verifyGeminiGeneration;
 
 void main() {
+  test('HTTP 400 distinguishes invalid keys and preconditions while RPC metadata stays allowlisted', () {
+    for (final entry in [
+      ('API key not valid. PRIVATE KEY', 'INVALID_ARGUMENT', 'gemini_key'),
+      (
+        'API key was reported as leaked. PRIVATE KEY',
+        'INVALID_ARGUMENT',
+        'gemini_key',
+      ),
+      (
+        'PRIVATE ACCOUNT / REGION',
+        'FAILED_PRECONDITION',
+        'gemini_precondition',
+      ),
+      ('PRIVATE REQUEST', 'INVALID_ARGUMENT', 'gemini_request'),
+    ]) {
+      final failure = AiFailure.fromGemini(
+        400,
+        jsonEncode({
+          'error': {'message': entry.$1, 'status': entry.$2},
+        }),
+      );
+      expect(failure.code, entry.$3);
+      expect(failure.rpcStatus, entry.$2);
+      final remote = AiFailure.fromGateway(
+        502,
+        jsonEncode({
+          'code': failure.code,
+          'upstreamStatus': 400,
+          'rpcStatus': failure.rpcStatus,
+          'error': entry.$1,
+        }),
+      );
+      expect(remote.code, entry.$3);
+      expect(remote.toString(), contains('Google status ${entry.$2}'));
+      expect(remote.toString(), isNot(contains('PRIVATE')));
+    }
+    expect(
+      AiFailure.fromGemini(400, '{"error":{"status":"PRIVATE KEY"}}').rpcStatus,
+      isNull,
+    );
+    final unknown = AiFailure.fromGateway(
+      502,
+      '{"code":"gemini_request","rpcStatus":"PRIVATE KEY"}',
+    );
+    expect(unknown.toString(), isNot(contains('PRIVATE')));
+  });
   test('old gateways and unknown errors remain actionable without echoing raw bodies', () {
     for (final status in [401, 429, 503, 502]) {
       final failure = AiFailure.fromGateway(

@@ -209,6 +209,7 @@ Future<void> main() async {
             'error': failure.message,
             'code': failure.code,
             'upstreamStatus': failure.upstreamStatus,
+            'rpcStatus': failure.rpcStatus,
           });
           continue;
         }

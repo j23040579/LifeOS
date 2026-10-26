@@ -8,8 +8,8 @@ capability or a production release.
 |---|---|
 | Dart formatting, lib/test/integration_test/tool | 78 files checked; no formatting changes required |
 | `flutter analyze` | No issues |
-| `flutter test --concurrency=2` | **129 passed**, no skipped/disabled tests |
-| `node --test server/gemini-worker.test.mjs` | **11 passed** using synthetic provider responses |
+| `flutter test --concurrency=2` | **130 passed**, no skipped/disabled tests |
+| `node --test server/gemini-worker.test.mjs` | **12 passed** using synthetic provider responses |
 | `dart run tool/bootstrap.dart`, repeated | Passed; existing runners preserved, SQLite web assets verified; documented Android INTERNET/automatic-backup settings applied |
 | `flutter build web --no-web-resources-cdn` | Passed; browser engine/fonts/PDF/SQLite assets served locally |
 | `flutter build apk --debug --target-platform android-arm64` | Passed, then passed incremental rebuild after final planning fixes |
@@ -199,3 +199,22 @@ body, so the precise live cause cannot be inferred from that screenshot.
 Bash instructions and diagnostic-code actions are in server/README.md under
 "Diagnose configured-but-failing generation". Pulling app source does not update
 an already deployed Worker.
+
+## Direct-probe success and Worker preconditions
+
+- The user reported a successful direct 3.5 Flash-Lite JSON test, followed by
+  Worker HTTP 400. That confirms the locally supplied key/model handles the probe's
+  JSON options, not the Worker's stored key or hosting-region/project conditions.
+- Corrected the generic 400 wording, which previously suggested JSON support was
+  necessarily the issue. Known invalid-key messages without ErrorInfo are now
+  classified, and Google's FAILED_PRECONDITION receives a distinct safe code.
+- Only allowlisted RPC statuses are returned/displayed. New tests exercise key
+  errors, preconditions, ambiguous INVALID_ARGUMENT, unknown status stripping and
+  raw-message redaction across both Worker and Dart boundaries.
+- Full suite **130 passed**, Worker tests **12 passed**, formatting/analysis clean;
+  web and Android ARM64 debug builds passed. No new dependency or generation request
+  format change. No automatic retry, model switch, billing change or deployment.
+- End-to-end live Worker success, its stored key/region restrictions and native
+  Windows/device execution remain unverified here. Replacing the Worker API-key
+  secret with the locally successful key is the next manual configuration check;
+  the screenshot does not establish the precise remote root cause.

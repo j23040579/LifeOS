@@ -7,9 +7,10 @@ Do not put either secret in `config/example.json`, Dart defines, a browser bundl
 Git, screenshots, logs, or chat. Disconnect in Coach revokes local remembered
 access; rotate the gateway token server-side to revoke a lost device.
 
-No live request or deployment has been performed. You need a Google AI project/key,
-a verified supported model ID, and a gateway running on your laptop or your own
-HTTPS host. Existing app features do not depend on any of these.
+Cloud checks use synthetic provider replies and have not independently validated
+your live deployment. You need a Google AI project/key, an eligible model, and a
+gateway on your laptop or your own HTTPS host. Existing offline app features do
+not depend on any of these.
 
 ## Free-only setup
 
@@ -158,7 +159,8 @@ confirmation flag cannot verify billing. Missing configuration sends no request.
 | `gemini_key` | Correct/replace the API key and update the Worker secret. |
 | `gemini_permission` | Check key restrictions, API/project access and free eligibility; keep billing disabled. |
 | `gemini_model` | Check the exact model ID and generation access for the project. |
-| `gemini_request` | Google rejected request settings; check text/JSON compatibility. |
+| `gemini_request` | Google rejected a request/configuration value. This alone does not prove that JSON output is unsupported; compare the direct test and Worker configuration. |
+| `gemini_precondition` | Google returned `FAILED_PRECONDITION`; check account/project/region/free-tier eligibility. Keep billing disabled. |
 | `gemini_quota` | Check AI Studio free quota and reset time; discovery does not prove usable free quota. |
 | `gemini_output_limit` | Output budget was exhausted; request a shorter answer. Further budget configuration needs the model's documented capabilities. |
 | `gemini_blocked` / `gemini_empty` | Try a short text-only question and check model compatibility. |
@@ -177,6 +179,28 @@ The updated Worker returns allowlisted codes and an upstream HTTP status, never 
 Google errors that could contain keys/prompts/account metadata. Flutter displays the
 safe diagnostics in Coach and Home. Legacy/unknown errors stay generic. The laptop
 gateway uses the same Dart classifications.
+
+### Direct test passes but Worker generation returns HTTP 400
+
+The user reported a direct `gemini-3.5-flash-lite` JSON probe **PASS**, followed by
+Worker generation HTTP 400. That establishes that the locally entered key/model
+can handle this test's JSON settings. It does not validate the key stored in the
+Worker or Google's handling of the request from its hosting region.
+
+First edit the Worker's **GEMINI_API_KEY secret** and replace it with the exact key
+used for the successful direct test. Paste only the key value, with no quotes,
+assignment prefix or surrounding whitespace. Deploy the secret change; preserve
+the gateway token and the selected model. Re-test with a short question.
+
+The updated diagnostics also recognize known invalid-key messages when Google's
+error has no `ErrorInfo.reason`. Allowlisted Google RPC statuses such as
+`INVALID_ARGUMENT` and `FAILED_PRECONDITION` now travel through the Worker and app.
+No raw message, key, region name, project identifier or prompt is reflected. A
+remaining generic 400 is not automatically labelled a JSON compatibility problem.
+
+If the problem persists after replacing the secret, deploy the latest Worker code
+and run the updated app. Share its safe code, HTTP status and Google RPC status;
+do not keep switching models or enable billing to diagnose a precondition.
 
 **Pulling Git does not update a deployed Worker.** In Cloudflare **Edit code**,
 replace the code with the current entire `server/gemini-worker.mjs`, and **Deploy**.

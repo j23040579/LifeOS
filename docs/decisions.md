@@ -191,3 +191,16 @@
 - The user's direct 3.8 probe continues to return 503. Offer one explicit manual
   test of the documented 3.5 Flash-Lite alternative; never change the deployed
   model automatically. No live key, remote configuration or app source was changed.
+
+## Direct Gemini success and Worker HTTP 400 — 26 October 2026
+
+- The user reported a successful direct 3.5 Flash-Lite JSON probe, while the Worker
+  returned 400. Model discovery and direct generation are now user-reported evidence;
+  successful end-to-end Worker generation and billing configuration remain unverified.
+- A generic 400 previously suggested JSON incompatibility too strongly. Corrected
+  that wording, added known invalid-key message recognition without ErrorInfo.reason,
+  and classified Google's FAILED_PRECONDITION separately. Only allowlisted RPC status
+  names cross the gateway; raw provider messages remain private.
+- The next account-side check is replacing the Worker's API-key secret with the
+  exact locally successful key and deploying it. Hosting-region/account restrictions
+  remain possible; no specific root cause or live fix is claimed from a screenshot.

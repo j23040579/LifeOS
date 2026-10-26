@@ -3,10 +3,23 @@ import 'dart:convert';
 /// Only bounded codes/statuses cross the provider boundary. Never echo provider
 /// messages: they may contain credentials, submitted text or account details.
 class AiFailure extends StateError {
-  AiFailure(this.code, {this.upstreamStatus})
-    : super(_messages[code] ?? _messages['gateway_failure']!);
+  AiFailure(this.code, {this.upstreamStatus, String? rpcStatus})
+    : rpcStatus = _rpcStatuses.contains(rpcStatus) ? rpcStatus : null,
+      super(_messages[code] ?? _messages['gateway_failure']!);
   final String code;
   final int? upstreamStatus;
+  final String? rpcStatus;
+  static const _rpcStatuses = {
+    'INVALID_ARGUMENT',
+    'FAILED_PRECONDITION',
+    'UNAUTHENTICATED',
+    'PERMISSION_DENIED',
+    'NOT_FOUND',
+    'RESOURCE_EXHAUSTED',
+    'UNAVAILABLE',
+    'INTERNAL',
+    'DEADLINE_EXCEEDED',
+  };
   static const _messages = {
     'gateway_auth': 'Gateway token rejected. Re-enter the token saved in your Worker secrets.',
     'gateway_not_ready': 'Gateway configuration is incomplete. Check its secrets, model ID and free-project confirmation, then deploy the settings.',
@@ -17,7 +30,8 @@ class AiFailure extends StateError {
     'gemini_key': 'Gemini rejected the API key. Check the GEMINI_API_KEY Worker secret and redeploy.',
     'gemini_permission': 'Gemini denied access. Check the key restrictions, API/project access and free-tier eligibility. Keep billing disabled.',
     'gemini_model': 'Gemini could not find this model for generation. Check the exact model ID and project access.',
-    'gemini_request': 'Gemini rejected the request settings. Check that the selected model supports text generation with JSON output.',
+    'gemini_request': 'Gemini rejected a request or configuration value. Compare the Worker API key/model with a direct test and check the Google status below.',
+    'gemini_precondition': 'Gemini rejected an account/project precondition. Check region, project and free-tier eligibility. Keep billing disabled.',
     'gemini_quota': 'Gemini quota was reached or is unavailable for this project/model. Check the free-tier quota and reset time; no paid fallback was used.',
     'rate_limit': 'A request limit was reached. Check the free-tier or local gateway limit and wait for its reset.',
     'gemini_unavailable': 'Gemini is temporarily unavailable. No automatic retry or provider switch was made.',
@@ -52,10 +66,21 @@ class AiFailure extends StateError {
       upstreamStatus: upstream is int && upstream >= 400 && upstream <= 599
           ? upstream
           : null,
+      rpcStatus: data['rpcStatus'] is String ? data['rpcStatus'] : null,
     );
   }
   factory AiFailure.fromGemini(int status, String body) {
     final error = _object(body)['error'];
+    final rpcStatus = error is Map && error['status'] is String
+        ? error['status'] as String
+        : null;
+    final invalidKeyMessage =
+        error is Map &&
+        error['message'] is String &&
+        RegExp(
+          r'api key (?:not valid|is invalid|expired|has expired|was reported as leaked)|invalid api key',
+          caseSensitive: false,
+        ).hasMatch(error['message'] as String);
     final reasons = error is Map && error['details'] is List
         ? (error['details'] as List)
               .whereType<Map>()
@@ -65,8 +90,11 @@ class AiFailure extends StateError {
     return AiFailure(
       reasons.contains('API_KEY_INVALID') ||
               reasons.contains('API_KEY_EXPIRED') ||
+              invalidKeyMessage ||
               status == 401
           ? 'gemini_key'
+          : status == 400 && rpcStatus == 'FAILED_PRECONDITION'
+          ? 'gemini_precondition'
           : status == 403
           ? 'gemini_permission'
           : status == 404
@@ -77,9 +105,10 @@ class AiFailure extends StateError {
           ? 'gemini_unavailable'
           : 'gemini_request',
       upstreamStatus: status,
+      rpcStatus: rpcStatus,
     );
   }
   @override
   String toString() =>
-      '$message [code: $code${upstreamStatus == null ? '' : '; Gemini HTTP $upstreamStatus'}]';
+      '$message [code: $code${upstreamStatus == null ? '' : '; Gemini HTTP $upstreamStatus'}${rpcStatus == null ? '' : '; Google status $rpcStatus'}]';
 }
